@@ -1,6 +1,5 @@
 
-function Get-SplunkSessionKey
-{   
+function Get-SplunkSessionKey {   
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -16,12 +15,10 @@ function Get-SplunkSessionKey
         password = $Credential.GetNetworkCredential().Password;
     }
 
-    try
-    {
+    try {
         $WebRequest = Invoke-RestMethod -Uri "$($BaseUrl)/services/auth/login" -Body $body -SkipCertificateCheck -ContentType 'application/x-www-form-urlencoded' -Method Post
     }
-    catch
-    {
+    catch {
         Write-Warning -Message "An exception occured with text: $($_.Exception)"
         return $WebRequest
     }

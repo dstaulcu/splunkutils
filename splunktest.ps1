@@ -27,8 +27,7 @@ if ($searchjob ) {
  
     # Wait for the job to complete
     $counter = 0
-    do
-    {
+    do {
         # sleep 
         $counter++
         Start-Sleep -Seconds 1
@@ -37,7 +36,7 @@ if ($searchjob ) {
         $jobstatus = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $searchjob.response.sid
  
         # retrieve the dispatchState property (Can be any of QUEUED, PARSING, RUNNING, PAUSED, FINALIZING, FAILED, DONE)
-        $dispatchState = [string]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "dispatchState"})."#text"
+        $dispatchState = [string]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "dispatchState" })."#text"
 
         # show status of the job
         write-host (get-date) "- Current dispatch sid $($searchjob.response.sid) has status [$($dispatchState)]."     
@@ -46,15 +45,16 @@ if ($searchjob ) {
 
     if ($dispatchState -match "FAILED") {
         write-host (get-date) "- Job execution failed. Exiting."
-    } else {
+    }
+    else {
 
         # now that the job is DONE, retrieve other job properties of interest:
-        $jobSid = [string]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "sid"})."#text"
-        $jobEventCount = [int]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "eventCount"})."#text"
-        $jobResultCount = [int]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "resultCount"})."#text"
-        $jobResultDiskUsage = [int]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "diskUsage"})."#text"
-        $jobResultrunDuration = [float]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "runDuration"})."#text"
-        $jobttl = [int]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "ttl"})."#text"
+        $jobSid = [string]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "sid" })."#text"
+        $jobEventCount = [int]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "eventCount" })."#text"
+        $jobResultCount = [int]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "resultCount" })."#text"
+        $jobResultDiskUsage = [int]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "diskUsage" })."#text"
+        $jobResultrunDuration = [float]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "runDuration" })."#text"
+        $jobttl = [int]($jobstatus.entry.content.dict.key | Where-Object { $_.Name -eq "ttl" })."#text"
 
         write-host (get-date) "- Job completed with EventCount=$($jobEventCount) ResultCount=$($jobResultCount) DiskUsage=$($jobResultDiskUsage) RunDuration=$($jobResultrunDuration) ttl=$($jobttl)"
 
@@ -74,8 +74,7 @@ if ($searchjob ) {
         if (Test-Path -Path "$($tmpFilePath)\$($tmpFileName)") { Remove-Item -Path "$($tmpFilePath)\$($tmpFileName)" -Force }
     
         $downloadPart = 1
-        do
-        {
+        do {
             # download the data in batches       
             $downloadPartFile = "$($tmpFilePath)\$($tmpFileName).part$($downloadPart)"
             write-host (get-date) "- Downloading up to $($maxResultRowsLimit) rows offset from $($totalResultsReturned) to $($downloadPartFile)"
@@ -100,29 +99,30 @@ if ($searchjob ) {
             if ($partfile.name -match "\.part1$") {
 
                 $partfile.FullName | Rename-Item -NewName "$($tmpFilePath)\$($tmpFileName)"
-            } else {
+            }
+            else {
                 # commit all but line 1 in other partfiles
                 $skip = 1
 
                 # create the FileStream and StreamWriter objects
                 $ins = New-Object System.IO.StreamReader($partfile.FullName)
-                $fs = New-Object IO.FileStream "$($tmpFilePath)\$($tmpFileName)" ,'Append','Write','Read'
+                $fs = New-Object IO.FileStream "$($tmpFilePath)\$($tmpFileName)" , 'Append', 'Write', 'Read'
                 $outs = New-Object System.IO.StreamWriter($fs)
 
                 try {
                     # Skip the first N lines, but allow for fewer than N, as well
-                    for( $s = 1; $s -le $skip -and !$ins.EndOfStream; $s++ ) {
+                    for ( $s = 1; $s -le $skip -and !$ins.EndOfStream; $s++ ) {
                         # waste the top line
                         $ins.ReadLine() | Out-Null
                     }
-                    while( !$ins.EndOfStream ) {
+                    while ( !$ins.EndOfStream ) {
                         $outs.writeline( $ins.ReadLine() )
                     }
                 }
                 finally {
-                $outs.Close()
-                $ins.close()
-                $fs.Dispose()
+                    $outs.Close()
+                    $ins.close()
+                    $fs.Dispose()
                 }
             }
             $partfile | Remove-Item -Force -ErrorAction SilentlyContinue

@@ -69,65 +69,6 @@ function Get-KVStoreCollectionList
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config"
 
     $headers = [ordered]@{
-        Authorization = "Splunk $($SessionKey)"
-        'Content-Type' = 'application/json'    
-        output_mode = 'json'
-    }
-
-    try
-    {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
-    }
-    catch
-    {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
-
-    return $WebRequest 
-}
-
-function Get-KVStoreCollectionList2
-{
-<#
-.SYNOPSIS
-    Returns a list of KVstore collections registered in Splunk.
-
-.DESCRIPTION
-    Get-KVStoreCollectionList is a function that returns a list of Returns a list of KVstore
-    collections registered in Splunk.
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    are associated with.
-
-.EXAMPLE
-     Get-KVStoreCollectionList -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search'
-#>
-
-    [CmdletBinding()]
-    param(
-        [ValidateNotNullOrEmpty()]
-        [string]$BaseUrl,
-        [ValidateNotNullOrEmpty()]
-        [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$AppName="search"
-    )
-
-    Write-Verbose -Message "$(get-date) - getting KVstore collection list within `"$($AppName)`" app."
-
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config"
-
-    $headers = [ordered]@{
         Authorization = "$($SessionKey)"
         'Content-Type' = 'application/json'    
         output_mode = 'json'
@@ -146,7 +87,7 @@ function Get-KVStoreCollectionList2
     return $WebRequest 
 }
 
-function Add-KVStoreTransform
+function Add-SplunkTransformLookup
 {
 <#
 .SYNOPSIS
@@ -226,7 +167,7 @@ function Add-KVStoreTransform
     return $WebRequest 
 }
 
-function Add-KVStoreRecord
+function Add-SplunkCollectionRecord
 {
 <#
 .SYNOPSIS
@@ -297,7 +238,7 @@ function Add-KVStoreRecord
     return $WebRequest 
 }
 
-function Get-KVStoreRecords
+function Get-SplunkCollectionRecords
 {
     <#
 .SYNOPSIS
@@ -361,7 +302,7 @@ function Get-KVStoreRecords
     return $WebRequest 
 }
 
-function Add-KVStoreRecordBatch
+function Add-SplunkCollectionRecordsBatch
 {
 <#
 .SYNOPSIS
@@ -428,7 +369,7 @@ function Add-KVStoreRecordBatch
     return $WebRequest
 }
 
-function Remove-KVStoreRecords
+function Remove-SplunkCollectionRecords
 {
 <#
 .SYNOPSIS
@@ -488,7 +429,7 @@ function Remove-KVStoreRecords
     return $WebRequest 
 }
 
-function Remove-KVStoreCollection
+function Remove-SplunkCollection
 {
 <#
 .SYNOPSIS
@@ -548,7 +489,7 @@ function Remove-KVStoreCollection
     return $WebRequest    
 }
 
-function Add-KVStoreCollection
+function Add-SplunkCollection
 {
 <#
 .SYNOPSIS
@@ -616,7 +557,7 @@ function Add-KVStoreCollection
     return $WebRequest
 }
 
-function Set-KVStoreSchema
+function Set-SplunkCollectionSchema
 {
 <#
 .SYNOPSIS
@@ -689,71 +630,116 @@ function Set-KVStoreSchema
     return $WebRequest
 }
 
- function create-searchjob {
+function Invoke-SplunkSearchJob {
 
-    param ($cred, $BaseUrl, $query)
+    [CmdletBinding()]
+    param (
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey, 
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl, 
+        [ValidateNotNullOrEmpty()]
+        [string]$query
+    )
  
-     # This will allow for self-signed SSL certs to work
-     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
- 
-     $uri = "$($BaseUrl)/services/search/jobs"
+    # This will allow for self-signed SSL certs to work
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
 
+    $uri = "$($BaseUrl)/services/search/jobs"
 
-     $body = @{
-         search = $query
-         output_mode = "csv"
-         count = "0"
-         exec_mode = "normal"
-         max_count = "0"
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
+        Accept = 'application/json'
+        'Content-Type' = 'application/json'
+    }     
+
+    $body = @{
+        search = $query
+        output_mode = "csv"
+        count = "0"
+        exec_mode = "normal"
+        max_count = "0"
     }
      
-     $response = Invoke-RestMethod -Method Post -Uri $uri -Credential $cred -Body $body -TimeoutSec 300
+     $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body
 
      return $response
- }
+}
  
- function check-searchjobstatus {
- 
- 
-     param ($cred, $server, $port, $jobsid)
- 
-     # This will allow for self-signed SSL certs to work
-     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
- 
-     $url = "https://${server}:${port}/services/search/jobs/$($jobsid)"   
-     $body = @{
-         output_mode = "csv"
-         count = "0"
-         max_count = "0"
-         exec_mode = "normal"
-         offset = $offset
-           }   
-     $response = Invoke-RestMethod -Method Post -Uri $url -Credential $cred -TimeoutSec 300
-     return $response
- }
- 
- function get-searchjob {
- 
- 
-     param ($cred, $server, $port, $jobsid, $offset=0)
- 
-     # This will allow for self-signed SSL certs to work
-     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
- 
-     $url = "https://${server}:${port}/services/search/jobs/$($jobsid)/results/" 
-     $body = @{
-         output_mode = "csv"
-         count = "0"
-         max_count = "0"
-         exec_mode = "normal"
-         offset = $offset
+function Get-SplunkSearchJobStatus {
 
-           }   
+    [CmdletBinding()]
+    param (
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey,
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$jobsid
+    )
+ 
+    # This will allow for self-signed SSL certs to work
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
+ 
+    $uri = "$($BaseUrl)/services/search/jobs/$($jobsid)"
+
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
+        Accept = 'application/json'
+        'Content-Type' = 'application/json'
+    }     
+
+    $body = @{
+        output_mode = "csv"
+        count = "0"
+        max_count = "0"
+        exec_mode = "normal"
+        offset = $offset
+    }
+
+    $response = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
+    return $response
+}
+ 
+function Get-SplunkSearchJobResults {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey,
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$jobsid,
+        [ValidateNotNullOrEmpty()]
+        [int]$offset=0
+   )
+ 
+    # This will allow for self-signed SSL certs to work
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   #(ssl3,SystemDefault,Tls,Tls11,Tls12)
+ 
+    $uri = "$($BaseUrl)/services/search/jobs/$($jobsid)/results/"
+
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
+        Accept = 'application/json'
+        'Content-Type' = 'application/json'
+    }     
+
+    $body = @{
+        output_mode = "csv"
+        count = "0"
+        max_count = "0"
+        exec_mode = "normal"
+        offset = $offset
+    }
      
-     $response = Invoke-RestMethod -Method Get -Uri $url -Credential $cred -Body $body -TimeoutSec 300
-     return $response
- }
+    $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body $body
+
+    return $response
+
+}
  

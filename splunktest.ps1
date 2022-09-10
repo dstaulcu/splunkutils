@@ -1,4 +1,4 @@
-import-module -name "C:\Apps\splunkutils\splunkutils.psm1"
+import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -Force
 
 <# Helpful commands to get started
 
@@ -7,21 +7,21 @@ get-help Get-SplunkSessionKey           # list details of first function to run
 
 #>
 
-$splunk_server = "mysplunkserver"
+$splunk_server = "win-9iksdb1vgmj.mshome.net"
 $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 
 # gather username/password for Splunk
-$myCred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)."
+if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }
 
 # trade username/password for session key
-$SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
+if (-not($SplunkSessionKey)) { $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl }
 
+# invoke search 
 $maxResultRowsLimit = 50000
-$query = '| makeresults count=100 '
+$query = '| makeresults count=100'
 
-
-$searchjob = create-searchjob -server $server -port $port -cred $cred -search $query
+$searchjob = Invoke-SplunkSearchJob -SessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query 
 
 if ($searchjob ) {
  
@@ -34,7 +34,7 @@ if ($searchjob ) {
         Start-Sleep -Seconds 1
 
         # get the job status object
-        $jobstatus = check-searchjobstatus -server $server -port $port -cred $cred -jobsid $searchjob.response.sid
+        $jobstatus = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $searchjob.response.sid
  
         # retrieve the dispatchState property (Can be any of QUEUED, PARSING, RUNNING, PAUSED, FINALIZING, FAILED, DONE)
         $dispatchState = [string]($jobstatus.entry.content.dict.key | ?{$_.Name -eq "dispatchState"})."#text"
@@ -79,7 +79,7 @@ if ($searchjob ) {
             # download the data in batches       
             $downloadPartFile = "$($tmpFilePath)\$($tmpFileName).part$($downloadPart)"
             write-host (get-date) "- Downloading up to $($maxResultRowsLimit) rows offset from $($totalResultsReturned) to $($downloadPartFile)"
-            $jobresults = get-searchjob -server $server -port $port -cred $cred -jobsid $searchjob.response.sid -offset $totalResultsReturned
+            $jobresults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $searchjob.response.sid -offset $totalResultsReturned
 
             $jobresults | ConvertFrom-Csv | Export-Csv -NoTypeInformation -Path $downloadPartFile
     

@@ -21,7 +21,7 @@ $query = '| makeresults count=150000
 
 # execute search
 write-output "$(get-date) - Invoking Read-SplunkSearchResults function with query: `n$($query)"
-$Events = Read-SplunkSearchResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query -Verbose
+$Events = Read-SplunkSearchResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
 write-output "$(get-date) - Read-SplunkSearchResults function returned with $($events.count) events."
 
 # provide preview of events

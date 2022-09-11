@@ -12,22 +12,23 @@ if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for int
 # trade username/password for session key
 $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
 
+# specify search query to execute
 $query = '| makeresults count=150000
 | streamstats count as eventnumber
 | eval _time = _time + eventnumber
 | delta eventnumber as delta
 | eval delta=coalesce(delta,"0")'
 
-# invoke search 
+# execute search
 write-output "$(get-date) - Invoking Read-SplunkSearchResults function with query: `n$($query)"
 $Events = Read-SplunkSearchResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
 write-output "$(get-date) - Read-SplunkSearchResults function returned with $($events.count) events."
 
-# provide a preview of events
+# provide preview of events
 write-output $events[0..9]
 write-output "..."
 write-output $events[-2..-1]
 
-# display script execution duration summary
+# display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start
 write-output "$(get-date) - Script execution completed with runtime duration of [$($timespan)]."

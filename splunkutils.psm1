@@ -116,7 +116,84 @@ function Get-SplunkSearchJobResults {
     return $response
 
 }
- 
+
+function Read-SplunkSearchResults 
+{
+
+    [CmdletBinding()]
+    param (
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey, 
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl, 
+        [ValidateNotNullOrEmpty()]
+        [string]$query
+    )
+
+    try {
+        $SplunkSearchJobResponse = Invoke-SplunkSearchJob -SessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
+    }
+    catch {
+        write-output "$(get-date) - Exiting after exception occured in Invoke-SplunkSearchJob function. Exception Message:"
+        write-output "$($error[0].Exception.Message)"
+        break
+    }
+    
+    $SearchJobSid = $SplunkSearchJobResponse.response.sid
+    
+    # wait for search job completion
+    do {
+    
+        Start-Sleep -Seconds 1
+    
+        try {
+            $SplunkSearchJobStatusResponse = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SearchJobSid
+        }
+        catch {
+            write-output "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobStatus function. Exception Message:"
+            write-output "$($error[0].Exception.Message)"
+            break        
+        }
+    
+        $isDone = ((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "isDone" }).'#text'
+        $dispatchState = [string]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "dispatchState" }).'#text'
+    
+        write-output "$(get-date) - Search with id [$($SearchJobSid)] has status [$($dispatchState)]."         
+    
+    } while ($isDone -eq 0)
+    $runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
+    $resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
+    
+    write-output "$(get-date) - Search with id [$($SearchJobSid)] completed having result count [$($resultCount)] after runtime duration of [$($runDuration)] seconds."         
+    
+    # gather search job results
+    $events = New-Object System.Collections.ArrayList
+    do {
+        
+        # get batch of events
+        try {
+            $SplunkSearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseURL $BaseUrl -jobsid $SearchJobSid -offset $events.count
+        }
+        catch {
+            write-output "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobResults. Exception Message:"
+            write-output "$($error[0].Exception.Message)"
+            break
+        }
+    
+        # append batch of events to results array
+        foreach ($result in $SplunkSearchJobResults.results) {
+            $events.Add($result) | out-null
+        }
+    
+        # give the user an idea of progress toward completion.
+        write-output "$(get-date) - Downloaded search results [$($events.count)] of [$($resultCount)]."         
+    
+    } while ($events.count -ne $resultCount)
+
+    return $events
+
+}
+
 function Get-KVStoreCollectionList {
     <#
 .SYNOPSIS

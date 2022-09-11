@@ -74,22 +74,12 @@ function Get-SplunkSearchJobStatus {
     $uri = "$($BaseUrl)/services/search/jobs/$($jobsid)"
 
     $headers = [ordered]@{
-        Authorization  = "Splunk $($SessionKey)"
-        Accept         = 'application/json'
-        'Content-Type' = 'application/json'
+        Authorization = "Splunk $($SessionKey)"
     }     
 
-    $body = @{
-        output_mode = "csv"
-        count       = "0"
-        max_count   = "0"
-        exec_mode   = "normal"
-        offset      = $offset
-    }
+    $Response = Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -SkipCertificateCheck
 
-    $response = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -SkipCertificateCheck
-
-    return $response
+    return $Response
 
 }
  
@@ -116,10 +106,8 @@ function Get-SplunkSearchJobResults {
     }     
 
     $body = @{
-        output_mode = "csv"
+        output_mode = "json"
         count       = "0"
-        max_count   = "0"
-        exec_mode   = "normal"
         offset      = $offset
     }
      

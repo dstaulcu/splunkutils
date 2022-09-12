@@ -178,3 +178,7 @@ try {
     write-output "$($error[0].Exception.Message)"
     break       
 }
+
+# display script execution runtime summary
+$timespan = New-TimeSpan -Start $script_start
+write-output "$(get-date) - Script execution completed with runtime duration of [$($timespan)]."

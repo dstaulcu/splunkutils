@@ -1,4 +1,5 @@
 
+<# PUBLIC AUTHENTICATION FUNCTIONS #>
 function Get-SplunkSessionKey {   
     [CmdletBinding()]
     param(
@@ -26,6 +27,84 @@ function Get-SplunkSessionKey {
     return $WebRequest.response.sessionKey
 }
 
+<# PUBLIC SEARCH FUNCTIONS #>
+function Read-SplunkSearchResults {
+
+    [CmdletBinding()]
+    param (
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey, 
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl, 
+        [ValidateNotNullOrEmpty()]
+        [string]$query
+    )
+
+    try {
+        $SplunkSearchJobResponse = Invoke-SplunkSearchJob -SessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
+    }
+    catch {
+        write-verbose "$(get-date) - Exiting after exception occured in Invoke-SplunkSearchJob function. Exception Message:"
+        write-verbose "$($error[0].Exception.Message)"
+        break
+    }
+    
+    $SearchJobSid = $SplunkSearchJobResponse.response.sid
+    
+    # wait for search job completion
+    do {
+    
+        Start-Sleep -Seconds 1
+    
+        try {
+            $SplunkSearchJobStatusResponse = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SearchJobSid
+        }
+        catch {
+            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobStatus function. Exception Message:"
+            write-verbose "$($error[0].Exception.Message)"
+            break        
+        }
+    
+        $isDone = ((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "isDone" }).'#text'
+        $dispatchState = [string]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "dispatchState" }).'#text'
+    
+        write-verbose "$(get-date) - Search with id [$($SearchJobSid)] has status [$($dispatchState)]."         
+    
+    } while ($isDone -eq 0)
+    $runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
+    $resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
+    
+    write-verbose "$(get-date) - Search with id [$($SearchJobSid)] completed having result count [$($resultCount)] after runtime duration of [$($runDuration)] seconds."         
+    
+    # gather search job results
+    $events = New-Object System.Collections.ArrayList
+    do {
+        
+        # get batch of events
+        try {
+            $SplunkSearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseURL $BaseUrl -jobsid $SearchJobSid -offset $events.count
+        }
+        catch {
+            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobResults. Exception Message:"
+            write-verbose "$($error[0].Exception.Message)"
+            break
+        }
+    
+        # append batch of events to results array
+        foreach ($result in $SplunkSearchJobResults.results) {
+            $events.Add($result) | out-null
+        }
+    
+        # give the user an idea of progress toward completion.
+        write-verbose "$(get-date) - Downloaded search results [$($events.count)] of [$($resultCount)]."         
+    
+    } while ($events.count -ne $resultCount)
+
+    return $events
+
+}
+
+<# PRIVATE SEARCH FUNCTIONS #>
 function Invoke-SplunkSearchJob {
 
     [CmdletBinding()]
@@ -117,84 +196,9 @@ function Get-SplunkSearchJobResults {
 
 }
 
-function Read-SplunkSearchResults 
-{
+<# PUBLIC KVSTORE/COLLECTION FUNCTIONS #>
 
-    [CmdletBinding()]
-    param (
-        [ValidateNotNullOrEmpty()]
-        [string]$sessionKey, 
-        [ValidateNotNullOrEmpty()]
-        [string]$BaseUrl, 
-        [ValidateNotNullOrEmpty()]
-        [string]$query
-    )
-
-    try {
-        $SplunkSearchJobResponse = Invoke-SplunkSearchJob -SessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
-    }
-    catch {
-        write-verbose "$(get-date) - Exiting after exception occured in Invoke-SplunkSearchJob function. Exception Message:"
-        write-verbose "$($error[0].Exception.Message)"
-        break
-    }
-    
-    $SearchJobSid = $SplunkSearchJobResponse.response.sid
-    
-    # wait for search job completion
-    do {
-    
-        Start-Sleep -Seconds 1
-    
-        try {
-            $SplunkSearchJobStatusResponse = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SearchJobSid
-        }
-        catch {
-            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobStatus function. Exception Message:"
-            write-verbose "$($error[0].Exception.Message)"
-            break        
-        }
-    
-        $isDone = ((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "isDone" }).'#text'
-        $dispatchState = [string]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "dispatchState" }).'#text'
-    
-        write-verbose "$(get-date) - Search with id [$($SearchJobSid)] has status [$($dispatchState)]."         
-    
-    } while ($isDone -eq 0)
-    $runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
-    $resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
-    
-    write-verbose "$(get-date) - Search with id [$($SearchJobSid)] completed having result count [$($resultCount)] after runtime duration of [$($runDuration)] seconds."         
-    
-    # gather search job results
-    $events = New-Object System.Collections.ArrayList
-    do {
-        
-        # get batch of events
-        try {
-            $SplunkSearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseURL $BaseUrl -jobsid $SearchJobSid -offset $events.count
-        }
-        catch {
-            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobResults. Exception Message:"
-            write-verbose "$($error[0].Exception.Message)"
-            break
-        }
-    
-        # append batch of events to results array
-        foreach ($result in $SplunkSearchJobResults.results) {
-            $events.Add($result) | out-null
-        }
-    
-        # give the user an idea of progress toward completion.
-        write-verbose "$(get-date) - Downloaded search results [$($events.count)] of [$($resultCount)]."         
-    
-    } while ($events.count -ne $resultCount)
-
-    return $events
-
-}
-
-function Get-KVStoreCollectionList {
+function Get-SplunkKVStoreCollectionList {
     <#
 .SYNOPSIS
     Returns a list of KVstore collections registered in Splunk.
@@ -216,7 +220,7 @@ function Get-KVStoreCollectionList {
     are associated with.
 
 .EXAMPLE
-     Get-KVStoreCollectionList -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search'
+     Get-SplunkKVStoreCollectionList -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search'
 #>
 
     [CmdletBinding()]
@@ -234,23 +238,17 @@ function Get-KVStoreCollectionList {
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config"
 
     $headers = [ordered]@{
-        Authorization  = "$($SessionKey)"
+        Authorization  = "Splunk $($SessionKey)"
         'Content-Type' = 'application/json'    
         output_mode    = 'json'
     }
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
 
-    return $WebRequest 
+    return $Response
 }
 
-function Add-SplunkCollectionRecord {
+function Add-SplunkKVStoreCollectionRecord {
     <#
 .SYNOPSIS
     Add a single record into kvstore collection
@@ -277,7 +275,7 @@ function Add-SplunkCollectionRecord {
     A hash table with values for fields_list entities
 
 .EXAMPLE
-     Add-KVStoreRecord -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record @{
+     Add-SplunkKVStoreCollectionRecord -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record @{
             name='David''
             message = 'Hello world!'
         }
@@ -307,79 +305,12 @@ function Add-SplunkCollectionRecord {
 
     $body = $Record | ConvertTo-Json -Compress
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
 
-    return $WebRequest 
+    return $Response
 }
 
-function Get-SplunkCollectionRecords {
-    <#
-.SYNOPSIS
-    List records in a specified kvstore collection
-
-.DESCRIPTION
-    List records in a specified kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection that will registered
-
-.PARAMETER Records
-    A hash table with values for fields_list entities
-
-.EXAMPLE
-     Get-KVStoreRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
-#>
-    [CmdletBinding()]
-    param(
-        [ValidateNotNullOrEmpty()]
-        [string]$BaseUrl,
-        [ValidateNotNullOrEmpty()]
-        [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$AppName = "search",
-        [ValidateNotNullOrEmpty()]
-        [string]$CollectionName
-    )
-
-    Write-Verbose -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($AppName)`" app."
-
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)"
-
-    $headers = [ordered]@{
-        Authorization = "Splunk $($SessionKey)"
-        output_mode   = 'json'
-    }
-
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers
-    } 
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
-
-    return $WebRequest 
-}
-
-function Add-SplunkCollectionRecordsBatch {
+function Add-SplunkKVStoreCollectionRecordsBatch {
     <#
 .SYNOPSIS
     Add a single record into kvstore collection
@@ -406,7 +337,7 @@ function Add-SplunkCollectionRecordsBatch {
     A hash table with values for fields_list entities
 
 .EXAMPLE
-     Add-KVStoreRecordBatch -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record $Records
+     Add-SplunkKVStoreCollectionRecordsBatch -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record $Records
 #>
     [CmdletBinding()]
     param(
@@ -432,18 +363,67 @@ function Add-SplunkCollectionRecordsBatch {
     
     $body = $Records | ConvertTo-Json -Compress
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
 
-    return $WebRequest
+    return $Response
 }
 
-function Remove-SplunkCollectionRecords {
+function Get-SplunkKVStoreCollectionRecords {
+    <#
+.SYNOPSIS
+    List records in a specified kvstore collection
+
+.DESCRIPTION
+    List records in a specified kvstore collection
+
+.PARAMETER BaseUrl
+    A string representing a url path to the management interface of a Spunk server.
+    The string is constructed with https://<hostname>:<port>
+    The default port is 8089.
+
+.PARAMETER SessionKey
+    A session key composed from output of the Get-SplunkSessionKey function
+
+.PARAMETER AppName
+    The name of the splunk app (search, home, etc.) that the KVStore of interest
+    is associated with.
+
+.PARAMETER CollectionName
+    The name of the kvstore collection that will registered
+
+.PARAMETER Records
+    A hash table with values for fields_list entities
+
+.EXAMPLE
+     Get-SplunkKVStoreCollectionRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
+#>
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [Parameter(Mandatory)]
+        [string]$AppName = "search",
+        [ValidateNotNullOrEmpty()]
+        [string]$CollectionName
+    )
+
+    Write-Verbose -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+
+    $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)"
+
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
+        output_mode   = 'json'
+    }
+
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers
+
+    return $Response
+}
+
+function Remove-SplunkKVStoreCollectionRecords {
     <#
 .SYNOPSIS
     Remove records in a kvstore collection
@@ -467,7 +447,7 @@ function Remove-SplunkCollectionRecords {
     The name of the kvstore collection
 
 .EXAMPLE
-     Remove-KVStoreRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
+     Remove-SplunkKVStoreCollectionRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
 #>    
     [CmdletBinding()]
     param(
@@ -489,18 +469,12 @@ function Remove-SplunkCollectionRecords {
         Authorization = "Splunk $($SessionKey)"
     }
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Delete
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Delete
 
-    return $WebRequest 
+    return $Response
 }
 
-function Add-SplunkCollection {
+function Add-SplunkKVStoreCollection {
     <#
 .SYNOPSIS
     Add a kvstore collection
@@ -554,18 +528,12 @@ function Add-SplunkCollection {
 
     write-verbose -Message "$(get-date) - invoking webrequest to url $($uri) with header of $($headers) and body of $($body)"    
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
-    } 
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
 
-    return $WebRequest
+    return $Response
 }
 
-function Set-SplunkCollectionSchema {
+function Set-SplunkKVStoreCollectionSchema {
     <#
 .SYNOPSIS
     Set the schema associated with a kvstore collection
@@ -592,7 +560,7 @@ function Set-SplunkCollectionSchema {
     A hash containing desired elements of collection schema.  See example.
 
 .EXAMPLE
-     Set-KVStoreSchema -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -CollectionSchema  @{
+    Set-SplunkKVStoreCollectionSchema -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -CollectionSchema  @{
             'field.id' = 'number'
             'field.name' = 'string'
             'field.message' = 'string'
@@ -624,18 +592,12 @@ function Set-SplunkCollectionSchema {
 
     $body = $CollectionSchema 
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
 
-    return $WebRequest
+    return $Response
 }
 
-function Remove-SplunkCollection {
+function Remove-SplunkKVStoreCollection {
     <#
 .SYNOPSIS
     Remove a kvstore collection
@@ -659,7 +621,7 @@ function Remove-SplunkCollection {
     The name of the kvstore collection
 
 .EXAMPLE
-     Remove-KVStoreCollection -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
+    Remove-SplunkKVStoreCollection -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
 #> 
     [CmdletBinding()]
     param(
@@ -681,16 +643,12 @@ function Remove-SplunkCollection {
         Authorization = "Splunk $($SessionKey)"
     }
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Delete
-    }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
-    }
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Delete
 
-    return $WebRequest    
+    return $Response
 }
+
+<# PUBLIC TRANSFORM FUNCTIONS #>
 
 function Add-SplunkTransformLookup {
     <#

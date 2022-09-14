@@ -10,7 +10,13 @@ import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -Force
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }
 
 # trade username/password for session key
-$SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
+try {
+    $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
+} catch {
+    Write-Error "$(get-date) - Exiting after exception occured in Get-SplunkSessionKey function. Exception Message:"
+    Write-Error "$($error[0].Exception.Message)"
+    break
+}
 
 # define properties of collection to create, update, etc.  
 $CollectionSchema = @{
@@ -27,9 +33,9 @@ $CollectionName = "test_collection_$($env:USERNAME)_3"
 
 $TransformSchema = @{
     'fields_list'   = '_key, id, user, message, message_date'
-    'type'          = 'extenal'
     'external_type' = 'kvstore'
     'name'          = $CollectionName
+    'collection'    = $CollectionName
 }
 
 # produce some random records to place in collection once created
@@ -151,33 +157,37 @@ catch {
 write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."  
 
 
-# remove kvstore records in specified collection in specified app (does not return anything)
-write-output "$(get-date) - Invoking Remove-SplunkKVStoreCollectionRecords function."  
-$SplunkKVStoreCollectionRecords = Remove-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
-
-
-# get kvstore records in specified collection in specified app
-write-output "$(get-date) - Invoking Get-SplunkKVStoreCollectionRecords function."
+# create the transform lookup if it does not exist
+write-output "$(get-date) - Invoking Get-SplunkTransformLookup function."
 try {
-    $SplunkKVStoreCollectionRecords = Get-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
-}
-catch {
-    write-output "$(get-date) - Exiting after exception occured in Get-SplunkKVStoreCollectionRecords function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break                
-}
-write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."  
-
-
-# remove kvstore collection in specified app (does not return anything)
-write-output "$(get-date) - Invoking Remove-SplunkKVStoreCollection function."
-try {
-    $SplunkKVStoreCollection = Remove-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+    $SplunkTransformLookup = Get-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName
 } catch {
-    write-output "$(get-date) - Exiting after exception occured in Remove-SplunkKVStoreCollection function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break       
+    write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
+    try {
+        $SplunkTransformLookup = Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema
+    } catch {
+        write-output "$(get-date) - Exiting after exception occured in Add-SplunkTransformLookup function. Exception Message:"
+        write-output "$($error[0].Exception.Message)"
+        break                    
+    }
 }
+
+<####  OTHER OPERATIONS ####
+
+# List all transform lookups
+Get-SplunkTransformLookups -sessionKey $SplunkSessionKey -BaseURL $BaseUrl
+
+
+# Remove kvstore records in specified collection in specified app (does not return anything)
+Remove-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+
+# Remove kvstore collection in specified app (does not return anything)
+Remove-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+
+# Remove transform lookup (does not return anything except error)
+Remove-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName
+
+###### END CLEANUP OPERATINS ####>
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

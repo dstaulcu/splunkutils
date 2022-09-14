@@ -650,54 +650,40 @@ function Remove-SplunkKVStoreCollection {
 
 <# PUBLIC TRANSFORM FUNCTIONS #>
 
+function Get-SplunkTransformLookups
+{
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey
+    )
+
+    $uri = "$($BaseUrl)/services/data/transforms/lookups"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        Accept         = 'application/json'
+        'Content-Type' = 'application/json'
+    }     
+
+    $WebRequest = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Method Get -Headers $headers
+
+    return $WebRequest
+}
+
 function Add-SplunkTransformLookup {
-    <#
-.SYNOPSIS
-    Add a KVstore transform entry (lookup) to a specified app in Splunk.
 
-.DESCRIPTION
-    Add a KVstore transform entry (lookup) to a specified app in Splunk.
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection that will registered
-
-.PARAMETER TransformSchema
-    A hash table with values for fields_list, type, external_type and name.
-
-.EXAMPLE
-     Add-KVStoreTransform -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -TransformSchema @{
-            'fields_list' = '_key, id, name, message'
-            'type' = 'extenal'
-            'external_type' = 'kvstore'
-            'name' = 'test'
-        }
-#>
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$AppName = "search",
         [ValidateNotNullOrEmpty()]
-        [string]$CollectionName,
         $TransformSchema
     )    
-
-    Write-Verbose -Message "$(get-date) - adding transform for KVstore collection named `"$($CollectionName)`" within `"$($AppName)`" app."
 
     <# Example TransformSchema:
         @{
@@ -708,21 +694,65 @@ function Add-SplunkTransformLookup {
         }
     #>
 
-    $uri = "$($BaseUrl)/servicesNS/admin/$($AppName)/data/transforms/lookups"
+    $uri = "$($BaseUrl)/services/data/transforms/lookups"
     
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
     }
 
     $body = $TransformSchema
+    
+    $WebRequest = Invoke-RestMethod -SkipCertificateCheck -Uri $uri -Headers $headers -Body $body -Method Post      
 
-    try {
-        $WebRequest = Invoke-WebRequest -Uri $uri -Headers $headers -Body $body -Method Post
+    return $WebRequest 
+}
+
+function Remove-SplunkTransformLookup {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [ValidateNotNullOrEmpty()]
+        [string]$LookupName
+    )    
+
+    Write-Verbose -Message "$(get-date) - removing transform having name `"$($LookupName)`"."
+
+    $uri = "$($BaseUrl)/services/data/transforms/lookups/$($LookupName)"
+    
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
     }
-    catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
+
+    $WebRequest = Invoke-RestMethod -SkipCertificateCheck -Uri $uri -Headers $headers -Method Delete
+
+    return $WebRequest 
+}
+
+function Get-SplunkTransformLookup {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [ValidateNotNullOrEmpty()]
+        [string]$LookupName
+    )    
+
+    Write-Verbose -Message "$(get-date) - removing transform having name `"$($LookupName)`"."
+
+    $uri = "$($BaseUrl)/services/data/transforms/lookups/$($LookupName)"
+    
+    $headers = [ordered]@{
+        Authorization = "Splunk $($SessionKey)"
     }
+
+    $WebRequest = Invoke-RestMethod -SkipCertificateCheck -Uri $uri -Headers $headers -Method Get
 
     return $WebRequest 
 }

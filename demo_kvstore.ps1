@@ -12,7 +12,8 @@ if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for int
 # trade username/password for session key
 try {
     $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
-} catch {
+}
+catch {
     Write-Error "$(get-date) - Exiting after exception occured in Get-SplunkSessionKey function. Exception Message:"
     Write-Error "$($error[0].Exception.Message)"
     break
@@ -48,7 +49,7 @@ for ($i = 1; $i -le 12345; $i++) {
         name         = "$($env:USERNAME)-$($i)"
         message      = "Hello World $($i)!"
         message_date = (New-TimeSpan -Start "01/01/1970" -End $(get-date)).TotalSeconds
-        _time = (New-TimeSpan -Start "01/01/1970" -End $(get-date)).TotalSeconds        
+        _time        = (New-TimeSpan -Start "01/01/1970" -End $(get-date)).TotalSeconds        
     }
     $Records.add([pscustomobject]$Record) | out-null
 }
@@ -103,11 +104,13 @@ else {
 write-output "$(get-date) - Invoking Get-SplunkTransformLookup function to dermine if lookup exists."
 try {
     Get-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName | Out-Null
-} catch {
+}
+catch {
     write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
     try {
         Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema | Out-Null
-    } catch {
+    }
+    catch {
         write-output "$(get-date) - Exiting after exception occured in Add-SplunkTransformLookup function. Exception Message:"
         write-output "$($error[0].Exception.Message)"
         break                    

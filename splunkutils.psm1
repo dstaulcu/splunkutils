@@ -355,11 +355,10 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
     # kvstore batch operation limited to 1000 records. Handle paging or array elements
     $pageSize = 1000
     
-    for ($i = 0; $i -le $records.count - 1; $i+= $pageSize)
-    {
+    for ($i = 0; $i -le $records.count - 1; $i += $pageSize) {
         $lbound = $i
-        $ubound = $i + $pageSize -1
-        if ($ubound -ge ($records.count - 1)) { $ubound = $records.count -1 } 
+        $ubound = $i + $pageSize - 1
+        if ($ubound -ge ($records.count - 1)) { $ubound = $records.count - 1 } 
 
         write-host -Message "$(get-date) - adding elements $($lbound) to $($ubound) of array to collection."
 
@@ -376,10 +375,6 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
 
     }
     
-    
-
-
-
     return $Response
 }
 
@@ -665,8 +660,7 @@ function Remove-SplunkKVStoreCollection {
 
 <# PUBLIC TRANSFORM FUNCTIONS #>
 
-function Get-SplunkTransformLookups
-{
+function Get-SplunkTransformLookups {
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]

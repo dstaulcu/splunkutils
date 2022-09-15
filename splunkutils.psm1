@@ -352,18 +352,33 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
         $Records
     )
 
-    Write-Verbose -Message "$(get-date) - adding array of records in collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    # kvstore batch operation limited to 1000 records. Handle paging or array elements
+    $pageSize = 1000
+    
+    for ($i = 0; $i -le $records.count - 1; $i+= $pageSize)
+    {
+        $lbound = $i
+        $ubound = $i + $pageSize -1
+        if ($ubound -ge ($records.count - 1)) { $ubound = $records.count -1 } 
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)/batch_save"
+        write-host -Message "$(get-date) - adding elements $($lbound) to $($ubound) of array to collection."
 
-    $headers = [ordered]@{
-        Authorization  = "Splunk $($SessionKey)"
-        'Content-Type' = 'application/json'
+        $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)/batch_save"
+    
+        $headers = [ordered]@{
+            Authorization  = "Splunk $($SessionKey)"
+            'Content-Type' = 'application/json'
+        }
+        
+        $body = $Records[$lbound..$ubound] | ConvertTo-Json -Compress
+    
+        $Response = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
+
     }
     
-    $body = $Records | ConvertTo-Json -Compress
+    
 
-    $Response = Invoke-WebRequest -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Post
+
 
     return $Response
 }

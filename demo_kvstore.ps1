@@ -24,6 +24,7 @@ $CollectionSchema = @{
     'field.user'                  = 'string'
     'field.message'               = 'string'
     'field.message_date'          = 'time'
+    'field._time'                 = 'time'    
     'accelerated_fields.my_accel' = '{"id": 1}'
 } 
 # note: possible collection schema item types include (array|number|boolean|time|string|cidr)
@@ -32,7 +33,7 @@ $AppName = 'search'
 $CollectionName = "test_collection_$($env:USERNAME)_3"
 
 $TransformSchema = @{
-    'fields_list'   = '_key, id, user, message, message_date'
+    'fields_list'   = '_key, id, user, message, message_date, _time'
     'external_type' = 'kvstore'
     'name'          = $CollectionName
     'collection'    = $CollectionName
@@ -40,15 +41,14 @@ $TransformSchema = @{
 
 # produce some random records to place in collection once created
 $Records = New-Object System.Collections.ArrayList
-for ($i = 0; $i -le 10; $i++) {
-
-    $message_date_random = (get-date).AddMinutes($(Get-Random -Minimum -500 -Maximum 500))
+for ($i = 1; $i -le 12345; $i++) {
 
     $Record = [ordered]@{
         id           = $i
         name         = "$($env:USERNAME)-$($i)"
         message      = "Hello World $($i)!"
-        message_date = $message_date_random
+        message_date = (New-TimeSpan -Start "01/01/1970" -End $(get-date)).TotalSeconds
+        _time = (New-TimeSpan -Start "01/01/1970" -End $(get-date)).TotalSeconds        
     }
     $Records.add([pscustomobject]$Record) | out-null
 }
@@ -63,10 +63,11 @@ catch {
     break        
 }
 
-# perform collection prepration actions if not already defined
+# if target collection not present in list then prepare it
 if ($CollectionName -notin $collections.title) {
  
     write-output "$(get-date) - Collection [$($CollectionName)] not present in [$($AppName)] app.  Preparing it."
+
 
     # add new collection  
     try {
@@ -78,6 +79,7 @@ if ($CollectionName -notin $collections.title) {
         break        
     }
     write-output "$(get-date) - Collection [$($CollectionName)] created in [$($AppName)] app."
+
 
     # define collection schema
     try {
@@ -97,23 +99,33 @@ else {
 }
 
 
-# add single kvstore record in specified collection in specified app
-write-output "$(get-date) - Invoking Add-SplunkKVStoreCollectionRecord function."
+# create the transform lookup if it does not exist
+write-output "$(get-date) - Invoking Get-SplunkTransformLookup function to dermine if lookup exists."
 try {
-    $SplunkKVStoreCollectionRecord = Add-SplunkKVStoreCollectionRecord -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -Record $Records[0]
+    Get-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName | Out-Null
+} catch {
+    write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
+    try {
+        Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema | Out-Null
+    } catch {
+        write-output "$(get-date) - Exiting after exception occured in Add-SplunkTransformLookup function. Exception Message:"
+        write-output "$($error[0].Exception.Message)"
+        break                    
+    }
+}
+
+
+# add multiple kvstore records in specified collection in specified app (can also Add-SplunkKVStoreCollectionRecord for a single record)
+write-output "$(get-date) - Invoking Add-SplunkKVStoreCollectionRecordsBatch function with recordset having $($records.count) entries."
+try {
+    Add-SplunkKVStoreCollectionRecordsBatch -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -Records $Records | Out-Null
 }
 catch {
-    write-output "$(get-date) - Exiting after exception occured in Add-SplunkKVStoreCollectionRecord function. Exception Message:"
+    write-output "$(get-date) - Exiting after exception occured in Add-SplunkKVStoreCollectionRecordsBatch function. Exception Message:"
     write-output "$($error[0].Exception.Message)"
-    break            
+    break                
 }
-if ($SplunkKVStoreCollectionRecord.StatusCode -notmatch "^(200|201)$") { 
-    write-output "$(get-date) - Unexpected status code returned from Add-SplunkKVStoreCollectionRecord function. Exiting."
-    break 
-}
-else {
-    write-output "$(get-date) - Add-SplunkKVStoreCollectionRecord completed with status description [$($SplunkKVStoreCollectionRecord.StatusDescription)]."    
-}
+
 
 
 # get kvstore records in specified collection in specified app
@@ -129,54 +141,10 @@ catch {
 write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."    
 
 
-# add multiple kvstore records in specified collection in specified app
-# todo -- there is a limit on count of records you can add so .... deal with that
-write-output "$(get-date) - Invoking Add-SplunkKVStoreCollectionRecordsBatch function."
-try {
-    $SplunkKVStoreCollectionRecordsBatch = Add-SplunkKVStoreCollectionRecordsBatch -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -Records $Records
-}
-catch {
-    write-output "$(get-date) - Exiting after exception occured in Add-SplunkKVStoreCollectionRecordsBatch function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break                
-}
-$SplunkKVStoreCollectionRecordsBatch = $SplunkKVStoreCollectionRecordsBatch.content | ConvertFrom-Json
-write-output "$(get-date) - Add-SplunkKVStoreCollectionRecordsBatch returned [$($SplunkKVStoreCollectionRecordsBatch.count)] records."
-
-
-# get kvstore records in specified collection in specified app
-write-output "$(get-date) - Invoking Get-SplunkKVStoreCollectionRecords function."
-try {
-    $SplunkKVStoreCollectionRecords = Get-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
-}
-catch {
-    write-output "$(get-date) - Exiting after exception occured in Get-SplunkKVStoreCollectionRecords function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break                
-}
-write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."  
-
-
-# create the transform lookup if it does not exist
-write-output "$(get-date) - Invoking Get-SplunkTransformLookup function."
-try {
-    $SplunkTransformLookup = Get-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName
-} catch {
-    write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
-    try {
-        $SplunkTransformLookup = Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema
-    } catch {
-        write-output "$(get-date) - Exiting after exception occured in Add-SplunkTransformLookup function. Exception Message:"
-        write-output "$($error[0].Exception.Message)"
-        break                    
-    }
-}
-
 <####  OTHER OPERATIONS ####
 
 # List all transform lookups
 Get-SplunkTransformLookups -sessionKey $SplunkSessionKey -BaseURL $BaseUrl
-
 
 # Remove kvstore records in specified collection in specified app (does not return anything)
 Remove-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName

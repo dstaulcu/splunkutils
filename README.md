@@ -1,5 +1,5 @@
 # splunkutils
-powershell module for interacting with splunk resources via rest
+[splunkutils.psm1](https://github.com/dstaulcu/splunkutils/blob/main/splunkutils.psm1/) is a powershell module for interacting with splunk resources via rest
 
 [demo_kvstore.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_kvstore.ps1/) - facilitate splunk splunk kv store operations
 

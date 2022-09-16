@@ -14,9 +14,8 @@ try {
     $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
 }
 catch {
-    Write-Error "$(get-date) - Exiting after exception occured in Get-SplunkSessionKey function. Exception Message:"
     Write-Error "$($error[0].Exception.Message)"
-    break
+    break   
 }
 
 # define properties of collection to create, update, etc.  
@@ -59,8 +58,7 @@ try {
     $collections = Get-SplunkKVStoreCollectionList -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName
 }
 catch {
-    write-output "$(get-date) - Exiting after exception occured in Get-SplunkKVStoreCollectionList function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
+    Write-Error "$($error[0].Exception.Message)"
     break        
 }
 
@@ -75,8 +73,7 @@ if ($CollectionName -notin $collections.title) {
         $SplunkKVStoreCollection = Add-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
     }
     catch {
-        write-output "$(get-date) - Exiting after exception occured in Add-SplunkKVStoreCollection function. Exception Message:"
-        write-output "$($error[0].Exception.Message)"
+        Write-Error "$($error[0].Exception.Message)"
         break        
     }
     write-output "$(get-date) - Collection [$($CollectionName)] created in [$($AppName)] app."
@@ -88,9 +85,8 @@ if ($CollectionName -notin $collections.title) {
 
     }
     catch {
-        write-output "$(get-date) - Exiting after exception occured in Set-SplunkKVStoreCollectionSchema function. Exception Message:"
-        write-output "$($error[0].Exception.Message)"
-        break        
+        Write-Error "$($error[0].Exception.Message)"
+        break         
     }
     write-output "$(get-date) - Collection schema set for [$($CollectionName)] in [$($AppName)] app."
 
@@ -111,9 +107,8 @@ catch {
         Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema | Out-Null
     }
     catch {
-        write-output "$(get-date) - Exiting after exception occured in Add-SplunkTransformLookup function. Exception Message:"
-        write-output "$($error[0].Exception.Message)"
-        break                    
+        Write-Error "$($error[0].Exception.Message)"
+        break                 
     }
 }
 
@@ -124,9 +119,8 @@ try {
     Add-SplunkKVStoreCollectionRecordsBatch -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -Records $Records | Out-Null
 }
 catch {
-    write-output "$(get-date) - Exiting after exception occured in Add-SplunkKVStoreCollectionRecordsBatch function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break                
+    Write-Error "$($error[0].Exception.Message)"
+    break           
 }
 
 
@@ -137,9 +131,8 @@ try {
     $SplunkKVStoreCollectionRecords = Get-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
 }
 catch {
-    write-output "$(get-date) - Exiting after exception occured in Get-SplunkKVStoreCollectionRecords function. Exception Message:"
-    write-output "$($error[0].Exception.Message)"
-    break                
+    Write-Error "$($error[0].Exception.Message)"
+    break           
 }
 write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."    
 

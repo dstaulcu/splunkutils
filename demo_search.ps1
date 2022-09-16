@@ -4,7 +4,12 @@ $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
 # import moduel providing for various Splunk related functions
-import-module -name "C:\Apps\splunkutils\splunkutils.psm1"
+import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
+
+<# Toggle Verbosity Level
+$VerbosePreference = 'Continue'
+$VerbosePreference = 'SilentlyContinue'
+#>
 
 # gather username/password for Splunk
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }
@@ -13,21 +18,33 @@ if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for int
 $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
 
 # specify search query to execute
-$query = '| makeresults count=150000
+$query = '| makeresults count=150234
 | streamstats count as eventnumber
 | eval _time = _time + eventnumber
 | delta eventnumber as delta
 | eval delta=coalesce(delta,"0")'
 
-# execute search
-write-output "$(get-date) - Invoking Read-SplunkSearchResults function with query: `n$($query)"
-$Events = Read-SplunkSearchResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
-write-output "$(get-date) - Read-SplunkSearchResults function returned with $($events.count) events."
+# $query = ' search index=main | head 10 '
 
-# provide preview of events
-write-output $events[0..9]
-write-output "..."
-write-output $events[-2..-1]
+# execute search job
+try { $SplunkSearchJob = Invoke-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query -namespace "search" -adhoc_search_level "smart" -sample_ratio 1  } catch { break }
+
+# wait for search job to complete
+try { $JobSummary = Watch-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -SearchJobSid $SplunkSearchJob.Sid } catch { break }
+
+# Get search job events [under construction while I figure out output structures ]
+<#
+if ($jobInfo.eventCount -gt 0) {
+    # todo -- convert from xml
+    $SearchJobEvents = Get-SplunkSearchJobEvents -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SplunkSearchJob.sid    
+}
+#>
+
+# Get search job results (statistics)
+if ($jobInfo.resultCount -gt 0) {
+    $SearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobSummary $JobSummary
+    write-output "$(get-date) - Function returned $($SearchJobResults.results.Count) items."
+}
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

@@ -9,7 +9,7 @@ function Get-SplunkSessionKey {
         $Credential
     )
 
-    write-verbose "$(get-date) - Attempting to exchnage Splunk credential for web session key."
+    write-host "$(get-date) - Attempting to exchnage Splunk credential for web session key." | Out-Null
 
     $body = @{
         username = $Credential.username
@@ -20,15 +20,15 @@ function Get-SplunkSessionKey {
         $WebRequest = Invoke-RestMethod -Uri "$($BaseUrl)/services/auth/login" -Body $body -SkipCertificateCheck -ContentType 'application/x-www-form-urlencoded' -Method Post
     }
     catch {
-        Write-Warning -Message "An exception occured with text: $($_.Exception)"
-        return $WebRequest
+        Write-Error "$($error[0].Exception.Message)"
+        break     
     }
 
     return $WebRequest.response.sessionKey
 }
 
 <# PUBLIC SEARCH FUNCTIONS #>
-function Read-SplunkSearchResults {
+function Watch-SplunkSearchJob {
 
     [CmdletBinding()]
     param (
@@ -37,19 +37,8 @@ function Read-SplunkSearchResults {
         [ValidateNotNullOrEmpty()]
         [string]$BaseUrl, 
         [ValidateNotNullOrEmpty()]
-        [string]$query
+        [string]$SearchJobSid
     )
-
-    try {
-        $SplunkSearchJobResponse = Invoke-SplunkSearchJob -SessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query
-    }
-    catch {
-        write-verbose "$(get-date) - Exiting after exception occured in Invoke-SplunkSearchJob function. Exception Message:"
-        write-verbose "$($error[0].Exception.Message)"
-        break
-    }
-    
-    $SearchJobSid = $SplunkSearchJobResponse.response.sid
     
     # wait for search job completion
     do {
@@ -60,51 +49,29 @@ function Read-SplunkSearchResults {
             $SplunkSearchJobStatusResponse = Get-SplunkSearchJobStatus -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SearchJobSid
         }
         catch {
-            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobStatus function. Exception Message:"
-            write-verbose "$($error[0].Exception.Message)"
-            break        
+            Write-Error "$($error[0].Exception.Message)"
+            break      
         }
     
         $isDone = ((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "isDone" }).'#text'
         $dispatchState = [string]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "dispatchState" }).'#text'
     
-        write-verbose "$(get-date) - Search with id [$($SearchJobSid)] has status [$($dispatchState)]."         
+        write-host "$(get-date) - Search with id [$($SearchJobSid)] has status [$($dispatchState)]." | Out-Null
     
     } while ($isDone -eq 0)
-    $runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
-    $resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
     
-    write-verbose "$(get-date) - Search with id [$($SearchJobSid)] completed having result count [$($resultCount)] after runtime duration of [$($runDuration)] seconds."         
-    
-    # gather search job results
-    $events = New-Object System.Collections.ArrayList
-    do {
-        
-        # get batch of events
-        try {
-            $SplunkSearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseURL $BaseUrl -jobsid $SearchJobSid -offset $events.count
-        }
-        catch {
-            write-verbose "$(get-date) - Exiting after exception occured in Get-SplunkSearchJobResults. Exception Message:"
-            write-verbose "$($error[0].Exception.Message)"
-            break
-        }
-    
-        # append batch of events to results array
-        foreach ($result in $SplunkSearchJobResults.results) {
-            $events.Add($result) | out-null
-        }
-    
-        # give the user an idea of progress toward completion.
-        write-verbose "$(get-date) - Downloaded search results [$($events.count)] of [$($resultCount)]."         
-    
-    } while ($events.count -ne $resultCount)
+    $JobSummary = @{
+        sid = $SearchJobSid
+        runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
+        resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
+        eventCount  = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "eventCount" }).'#text'
+    }
 
-    return $events
-
+    write-host "$(get-date) - Search with id [$($JobSummary.Sid)] completed having eventcount [$($JobSummary.eventCount)] and resultcount [$($JobSummary.resultCount)] with runtime duration of [$($JobSummary.runDuration)] seconds." | Out-Null
+    
+    return $JobSummary
 }
 
-<# PRIVATE SEARCH FUNCTIONS #>
 function Invoke-SplunkSearchJob {
 
     [CmdletBinding()]
@@ -114,10 +81,15 @@ function Invoke-SplunkSearchJob {
         [ValidateNotNullOrEmpty()]
         [string]$BaseUrl, 
         [ValidateNotNullOrEmpty()]
-        [string]$query
+        [string]$query,
+        [string]$namespace = "search",
+        [ValidateSet("fast","smart","verbose")]
+        [string]$adhoc_search_level = "smart",
+        [int]$sample_ratio = 1
+
     )
  
-    $uri = "$($BaseUrl)/services/search/jobs"
+    $uri = "$($BaseUrl)/services/search/v2/jobs"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -126,17 +98,24 @@ function Invoke-SplunkSearchJob {
     }     
 
     $body = @{
-        search      = $query
-        output_mode = "csv"
-        count       = "0"
-        exec_mode   = "normal"
-        max_count   = "0"
+        search             = $query
+        output_mode        = "json"
+        count              = "0"
+        exec_mode          = "normal"
+        max_count          = 10000
+        adhoc_search_level = $adhoc_search_level  # verbose, fast, smart
+        sample_ratio       = $sample_ratio 
+        namespace          = $namespace
     }
+
+    Write-Host -Message "$(get-date) - Invoking-SplunkSearchJob with query: $($query)." | Out-Null
      
     $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck
 
     return $response
 }
+
+<# PRIVATE SEARCH FUNCTIONS #>
  
 function Get-SplunkSearchJobStatus {
 
@@ -150,7 +129,7 @@ function Get-SplunkSearchJobStatus {
         [string]$jobsid
     )
   
-    $uri = "$($BaseUrl)/services/search/jobs/$($jobsid)"
+    $uri = "$($BaseUrl)/services/search/v2/jobs/$($jobsid)"
 
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
@@ -162,6 +141,56 @@ function Get-SplunkSearchJobStatus {
 
 }
  
+function Get-SplunkSearchJobEvents {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$sessionKey,
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$jobsid
+    )
+  
+    $uri = "$($BaseUrl)/services/search/v2/jobs/$($jobsid)/events/"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        Accept         = 'application/json'
+        'Content-Type' = 'application/json'
+    }     
+
+    $offset = 0
+    $Items = New-Object System.Collections.ArrayList
+
+    do {
+        
+        try {
+            $SplunkSearchJobResults = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body  @{ output_mode = "xml" ; offset=$offset ; count = 0 } -SkipCertificateCheck
+        }
+        catch {
+            Write-Error "$($error[0].Exception.Message)"
+            break        
+        }
+    
+        # append batch of events to results array
+        foreach ($result in $SplunkSearchJobResults.results) {
+            $Items.Add($result) | out-null
+        }
+
+        # give the user an idea of progress toward completion.
+        write-host "$(get-date) - Downloaded $($Items.count) of $($jobsummary.resultCount) results." | Out-Null
+
+
+        $offset = $Items.count
+        
+    } until ($Items.count -ge $jobSummary.resultCount)    
+     
+    return $Items        
+
+}
+
 function Get-SplunkSearchJobResults {
 
     [CmdletBinding()]
@@ -171,12 +200,12 @@ function Get-SplunkSearchJobResults {
         [ValidateNotNullOrEmpty()]
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
-        [string]$jobsid,
+        [System.Collections.Hashtable]$jobSummary,
         [ValidateNotNullOrEmpty()]
         [int]$offset = 0
     )
   
-    $uri = "$($BaseUrl)/services/search/jobs/$($jobsid)/results/"
+    $uri = "$($BaseUrl)/services/search/v2/jobs/$($jobSummary.sid)/results/"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -184,15 +213,33 @@ function Get-SplunkSearchJobResults {
         'Content-Type' = 'application/json'
     }     
 
-    $body = @{
-        output_mode = "json"
-        count       = "0"
-        offset      = $offset
-    }
-     
-    $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck
+    $offset = 0
+    $Items = New-Object System.Collections.ArrayList
 
-    return $response
+    do {
+        
+        try {
+            $SplunkSearchJobResults = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body  @{ output_mode = "json" ; offset=$offset ; count = 0 } -SkipCertificateCheck
+        }
+        catch {
+            Write-Error "$($error[0].Exception.Message)"
+            break        
+        }
+    
+        # append batch of events to results array
+        foreach ($result in $SplunkSearchJobResults.results) {
+            $Items.Add($result) | out-null
+        }
+
+        # give the user an idea of progress toward completion.
+        write-host "$(get-date) - Downloaded $($Items.count) of $($jobsummary.resultCount) results." | Out-Null
+
+
+        $offset = $Items.count
+        
+    } until ($Items.count -ge $jobSummary.resultCount)    
+     
+    return $Items
 
 }
 
@@ -233,7 +280,7 @@ function Get-SplunkKVStoreCollectionList {
         [string]$AppName = "search"
     )
 
-    Write-Verbose -Message "$(get-date) - getting KVstore collection list within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - getting KVstore collection list within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config"
 
@@ -294,7 +341,7 @@ function Add-SplunkKVStoreCollectionRecord {
         $Record
     )
 
-    Write-Verbose -Message "$(get-date) - adding single record to collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - adding single record to collection named `"$($CollectionName)`" within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)"
 
@@ -360,7 +407,7 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
         $ubound = $i + $pageSize - 1
         if ($ubound -ge ($records.count - 1)) { $ubound = $records.count - 1 } 
 
-        write-host -Message "$(get-date) - adding elements $($lbound) to $($ubound) of array to collection."
+        write-host -Message "$(get-date) - adding elements $($lbound) to $($ubound) of array to collection." | Out-Null
 
         $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)/batch_save"
     
@@ -419,7 +466,7 @@ function Get-SplunkKVStoreCollectionRecords {
         [string]$CollectionName
     )
 
-    Write-Verbose -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)"
 
@@ -471,7 +518,7 @@ function Remove-SplunkKVStoreCollectionRecords {
         [string]$CollectionName
     )
 
-    Write-Verbose -Message "$(get-date) - removing records in collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - removing records in collection named `"$($CollectionName)`" within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/data/$($CollectionName)"
 
@@ -523,7 +570,7 @@ function Add-SplunkKVStoreCollection {
 
     $ProgressPreference = 'SilentlyContinue'
 
-    write-verbose -Message "$(get-date) - creating KVstore collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - creating KVstore collection named `"$($CollectionName)`" within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config"
 
@@ -590,7 +637,7 @@ function Set-SplunkKVStoreCollectionSchema {
         $CollectionSchema
     )
 
-    write-verbose -Message "$(get-date) - setting schema for KVstore collection named `"$($CollectionName)`" within `"$($AppName)`" app."
+    Write-Host -Message "$(get-date) - setting schema for KVstore collection named `"$($CollectionName)`" within `"$($AppName)`" app." | Out-Null
 
     $uri = "$($BaseUrl)/servicesNS/nobody/$($AppName)/storage/collections/config/$($CollectionName)"
 
@@ -728,7 +775,7 @@ function Remove-SplunkTransformLookup {
         [string]$LookupName
     )    
 
-    Write-Verbose -Message "$(get-date) - removing transform having name `"$($LookupName)`"."
+    Write-Host -Message "$(get-date) - removing transform having name `"$($LookupName)`"." | Out-Null
 
     $uri = "$($BaseUrl)/services/data/transforms/lookups/$($LookupName)"
     

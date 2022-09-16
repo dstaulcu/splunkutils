@@ -43,15 +43,12 @@ try { $JobSummary = Watch-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl
 if ($jobInfo.resultCount -gt 0) {
     $SearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobSummary $JobSummary
     write-output "$(get-date) - Function returned $($SearchJobResults.results.Count) items."
-    write-output $SearchJobResults[0]
-
 }
 
 # display preview of results
 if ($SearchJobResult.count -ge 1) {
-    write-output "$(get-date) - Result Preview:"
-    $SearchJobResults | Group-Object index, sourcetype, source
-
+    write-output "$(get-date) - First Result Preview:"
+    $SearchJobResults[0]
 }
 
 # todo:  delete job

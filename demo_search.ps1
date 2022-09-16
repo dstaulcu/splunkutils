@@ -22,29 +22,39 @@ $query = '| makeresults count=150234
 | streamstats count as eventnumber
 | eval _time = _time + eventnumber
 | delta eventnumber as delta
-| eval delta=coalesce(delta,"0")'
+| eval delta=coalesce(delta,"0")
+| table _time delta, eventnumber
+| sort 0 _time '
 
-# $query = ' search index=main | head 10 '
+# specify search query to execute
+$query = ' search earliest=-24h index=_internal
+| stats count by _time, index, sourcetype, source, host, _raw
+| fields - count
+| sort 0 _time '
+
 
 # execute search job
-try { $SplunkSearchJob = Invoke-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query -namespace "search" -adhoc_search_level "smart" -sample_ratio 1  } catch { break }
+try { $SplunkSearchJob = Invoke-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query -namespace "search" -adhoc_search_level "smart" -sample_ratio 1 } catch { break }
 
 # wait for search job to complete
 try { $JobSummary = Watch-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -SearchJobSid $SplunkSearchJob.Sid } catch { break }
 
-# Get search job events [under construction while I figure out output structures ]
-<#
-if ($jobInfo.eventCount -gt 0) {
-    # todo -- convert from xml
-    $SearchJobEvents = Get-SplunkSearchJobEvents -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobsid $SplunkSearchJob.sid    
-}
-#>
-
-# Get search job results (statistics)
+# download search job results (as statistics)
 if ($jobInfo.resultCount -gt 0) {
     $SearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobSummary $JobSummary
     write-output "$(get-date) - Function returned $($SearchJobResults.results.Count) items."
+    write-output $SearchJobResults[0]
+
 }
+
+# display preview of results
+if ($SearchJobResult.count -ge 1) {
+    write-output "$(get-date) - Result Preview:"
+    $SearchJobResults | Group-Object index, sourcetype, source
+
+}
+
+# todo:  delete job
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

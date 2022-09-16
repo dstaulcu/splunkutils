@@ -140,7 +140,8 @@ function Get-SplunkSearchJobStatus {
     return $Response
 
 }
- 
+
+<# under construction
 function Get-SplunkSearchJobEvents {
 
     [CmdletBinding()]
@@ -190,6 +191,7 @@ function Get-SplunkSearchJobEvents {
     return $Items        
 
 }
+#>
 
 function Get-SplunkSearchJobResults {
 

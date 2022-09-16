@@ -61,7 +61,7 @@ function Watch-SplunkSearchJob {
     } while ($isDone -eq 0)
     
     $JobSummary = @{
-        sid = $SearchJobSid
+        sid         = $SearchJobSid
         runDuration = [decimal]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "runDuration" }).'#text'
         resultCount = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "resultCount" }).'#text'
         eventCount  = [int]((([xml] $SplunkSearchJobStatusResponse.InnerXml).entry.content.dict.key) | Where-Object { $_.Name -eq "eventCount" }).'#text'
@@ -83,7 +83,7 @@ function Invoke-SplunkSearchJob {
         [ValidateNotNullOrEmpty()]
         [string]$query,
         [string]$namespace = "search",
-        [ValidateSet("fast","smart","verbose")]
+        [ValidateSet("fast", "smart", "verbose")]
         [string]$adhoc_search_level = "smart",
         [int]$sample_ratio = 1
 
@@ -108,7 +108,8 @@ function Invoke-SplunkSearchJob {
         namespace          = $namespace
     }
 
-    Write-Host -Message "$(get-date) - Invoking-SplunkSearchJob with query: $($query)." | Out-Null
+    Write-Host -Message "$(get-date) - Invoking-SplunkSearchJob with query:" | Out-Null
+    Write-Host -Message "$($query)" | Out-Null    
      
     $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck
 
@@ -221,7 +222,7 @@ function Get-SplunkSearchJobResults {
     do {
         
         try {
-            $SplunkSearchJobResults = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body  @{ output_mode = "json" ; offset=$offset ; count = 0 } -SkipCertificateCheck
+            $SplunkSearchJobResults = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -Body @{ output_mode = "json" ; offset = $offset ; count = 0 } -SkipCertificateCheck
         }
         catch {
             Write-Error "$($error[0].Exception.Message)"

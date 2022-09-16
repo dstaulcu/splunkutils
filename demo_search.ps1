@@ -6,7 +6,7 @@ $script_start = get-date
 # import moduel providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
 
-<# Toggle Verbosity Level
+<# Toggle global verbosity Level
 $VerbosePreference = 'Continue'
 $VerbosePreference = 'SilentlyContinue'
 #>
@@ -17,7 +17,7 @@ if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for int
 # trade username/password for session key
 $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
 
-# specify search query to execute
+# specify search query to execute (non-events)
 $query = '| makeresults count=150234
 | streamstats count as eventnumber
 | eval _time = _time + eventnumber
@@ -26,12 +26,10 @@ $query = '| makeresults count=150234
 | table _time delta, eventnumber
 | sort 0 _time '
 
-# specify search query to execute
-$query = ' search earliest=-24h index=_internal
+# specify search query to execute (events)
+$query = ' search earliest=-8h index=_internal
 | stats count by _time, index, sourcetype, source, host, _raw
-| fields - count
 | sort 0 _time '
-
 
 # execute search job
 try { $SplunkSearchJob = Invoke-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -query $query -namespace "search" -adhoc_search_level "smart" -sample_ratio 1 } catch { break }
@@ -46,7 +44,10 @@ if ($jobInfo.resultCount -gt 0) {
 }
 
 # display preview of results
-if ($SearchJobResult.count -ge 1) {
+if ($SearchJobResults.count -ge 1) {
+    Write-Output "$(Get-date) - Result type Statistics:"
+    $SearchJobResults | Group-Object index, sourcetype, source | Select-Object Count, Name | Sort-Object Count -Descending | Format-Table
+
     write-output "$(get-date) - First Result Preview:"
     $SearchJobResults[0]
 }

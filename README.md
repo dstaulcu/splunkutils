@@ -8,4 +8,4 @@
 
 [demo_kvstore.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_kvstore.ps1/) - leverages splunkutils to facilitate splunk kv store and transform lookup operations.
 
-[demo_splunkbase.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_splunkbase.ps1/) - leverages splunkutils to facilitate authentication and download of most recent list of apps on Splunbase
+[demo_splunkbase.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_splunkbase.ps1/) - leverages splunkutils to facilitate authentication and download of most recent list of apps on Splunkbase

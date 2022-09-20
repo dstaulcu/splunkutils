@@ -815,3 +815,68 @@ function Get-SplunkTransformLookup {
 
     return $WebRequest 
 }
+
+
+<# SPLUNKBASE #>
+
+function Get-SplunkbaseSession {
+    param($credential)
+
+    $user = $credential.UserName
+    $pass = [System.Net.NetworkCredential]::new("", $credential.Password).Password
+
+    ## establish logon session to splunk via okta
+    $BASE_AUTH_URL='https://account.splunk.com/api/v1/okta/auth'
+    $Body = @{
+        username = $user
+        password = $pass
+    }
+    $WebRequest = Invoke-WebRequest $BASE_AUTH_URL -SessionVariable 'Session' -Body $Body -Method 'POST' -UseBasicParsing
+    if (-not($WebRequest.StatusCode -eq "200")) {
+        Write-Error -Message "$(get-date) - Get-Splunkbase-Session: There was a problem authenticating to Splunk.  Exit."
+        break
+    }
+
+    $ssoid_cookie = (($WebRequest.Content | ConvertFrom-Json).cookies).ssoid_cookie
+
+    $cookie = New-Object System.Net.Cookie    
+    $cookie.Name = "SSOSID"
+    $cookie.Value = $ssoid_cookie
+    $cookie.Domain = ".splunk.com"
+    $session.Cookies.Add($cookie);
+
+    return $session
+}
+
+function Get-SplunkbaseApps {
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.PowerShell.Commands.WebRequestSession]$session
+    )
+
+    # first run just to get the amount of pages to iterate over.
+    $url = "https://splunkbase.splunk.com/api/v1/app/?order=latest&limit=1&offset=0"
+    $response = invoke-webrequest $url -WebSession $session -UseBasicParsing
+    $content = $response.Content | ConvertFrom-Json
+
+    # gather all of the content available over pages
+    $Apps = New-Object System.Collections.ArrayList
+
+    for ($offset = 0; $offset -le $content.total; $offset += 100)
+    {
+        write-verbose -message "$(get-date) - Getting next 100 results from offset $($offset) [total=$($content.total)]"
+
+        $url = "https://splunkbase.splunk.com/api/v1/app/?order=latest&limit=100&offset=$($offset)"
+        $response = invoke-webrequest $url -WebSession $Session -UseBasicParsing
+
+        $batch_of_apps = $response.Content | ConvertFrom-Json   
+
+        foreach ($result in $batch_of_apps.results) {
+            $Apps.add($result) | Out-Null
+        }
+
+    }    
+
+    return $Apps
+}

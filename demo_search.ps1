@@ -38,7 +38,7 @@ try { $SplunkSearchJob = Invoke-SplunkSearchJob -sessionKey $SplunkSessionKey -B
 try { $JobSummary = Watch-SplunkSearchJob -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -SearchJobSid $SplunkSearchJob.Sid } catch { break }
 
 # download search job results (as statistics)
-if ($jobInfo.resultCount -gt 0) {
+if ($JobSummary.resultCount -gt 0) {
     $SearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobSummary $JobSummary
     write-output "$(get-date) - Function returned $($SearchJobResults.results.Count) items."
 }

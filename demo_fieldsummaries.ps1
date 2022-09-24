@@ -43,8 +43,8 @@ foreach ($object in $SplunkObjects) {
     $sample_ratio = 1
     $sample_ratio = [int]$sample_ratio.tostring().PadRight(($object.count.length-1),'0')
 
+    # give the user a status about what's going on at this juncture
     write-host "$(get-date) - key [$($key)] has [$($object.count)] events. Using sample ratio of $($sample_ratio)."
-
 
     # specify search query to execute (non-events)
     $query = '| search index="' + $object.index + '" sourcetype="' + $object.sourcetype + '" source="' + $object.source + '" | fieldsummary | fields field | mvcombine field | eval key="' + $key + '"'
@@ -69,6 +69,6 @@ foreach ($object in $SplunkObjects) {
 # display the array of field summaries. 
 $FieldSummaries
 
-# display script execution runtime summary and brag to supervisor (who has no idea what you go through to get shit done) about time saved.
+# display script execution runtime summary and marvel about value given time
 $timespan = New-TimeSpan -Start $script_start
 write-output "$(get-date) - Script execution completed with runtime duration of [$($timespan)]."

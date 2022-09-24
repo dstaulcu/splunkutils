@@ -3,7 +3,7 @@ $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
-# import moduel providing for various Splunk related functions
+# import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
 
 <# Toggle global verbosity Level
@@ -35,9 +35,10 @@ if ($jobSummary.resultCount -gt 0) {
 $SplunkObjects = $SearchJobResults
 $FieldSummaries = New-Object System.Collections.ArrayList
 
+# iterate over each index, sourctype, and source combination serially to produce fieldsummary
 foreach ($object in $SplunkObjects) {
 
-    # todo -- dnyamically compute sample ratio based on count events observed via tstats
+    # dynamically compute sample ratio for index search based on count events observed in tstats results
     $key = $object.index + '*' + $object.sourcetype + '*' + $object.source    
     $sample_ratio = 1
     $sample_ratio = [int]$sample_ratio.tostring().PadRight(($object.count.length-1),'0')
@@ -46,7 +47,6 @@ foreach ($object in $SplunkObjects) {
 
 
     # specify search query to execute (non-events)
-
     $query = '| search index="' + $object.index + '" sourcetype="' + $object.sourcetype + '" source="' + $object.source + '" | fieldsummary | fields field | mvcombine field | eval key="' + $key + '"'
 
     # execute search job
@@ -59,13 +59,16 @@ foreach ($object in $SplunkObjects) {
     if ($jobSummary.resultCount -gt 0) {
         $SearchJobResults = Get-SplunkSearchJobResults -sessionKey $SplunkSessionKey -BaseUrl $BaseUrl -jobSummary $JobSummary
         write-output "$(get-date) - Function returned $($SearchJobResults.results.Count) items."
+
+        # append fieldsummary for this entity type to array
         $FieldSummaries.add($SearchJobResults) | out-null   
     }
 
 }
 
+# display the array of field summaries. 
 $FieldSummaries
 
-# display script execution runtime summary
+# display script execution runtime summary and brag to supervisor (who has no idea what you go through to get shit done) about time saved.
 $timespan = New-TimeSpan -Start $script_start
 write-output "$(get-date) - Script execution completed with runtime duration of [$($timespan)]."

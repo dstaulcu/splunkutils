@@ -3,7 +3,7 @@ $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
-# import moduel providing for various Splunk related functions
+# import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
 
 <# Toggle global verbosity Level

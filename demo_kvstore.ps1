@@ -35,7 +35,7 @@ $CollectionSchema = @{
 } 
 # note: possible collection schema item types include (array|number|boolean|time|string|cidr)
 
-$AppName = 'search'
+$Namespace = 'search'
 $CollectionName = "test_collection_$($env:USERNAME)_3"
 
 $TransformSchema = @{
@@ -61,7 +61,7 @@ for ($i = 1; $i -le 12345; $i++) {
 
 # get list of kvstore collections in specified app
 try {
-    $collections = Get-SplunkKVStoreCollectionList -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName
+    $collections = Get-SplunkKVStoreCollectionList -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace
 }
 catch {
     Write-Error "$($error[0].Exception.Message)"
@@ -71,34 +71,34 @@ catch {
 # if target collection not present in list then prepare it
 if ($CollectionName -notin $collections.title) {
  
-    write-output "$(get-date) - Collection [$($CollectionName)] not present in [$($AppName)] app.  Preparing it."
+    write-output "$(get-date) - Collection [$($CollectionName)] not present in [$($Namespace)] namespace.  Preparing it."
 
 
     # add new collection  
     try {
-        $SplunkKVStoreCollection = Add-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+        $SplunkKVStoreCollection = Add-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName
     }
     catch {
         Write-Error "$($error[0].Exception.Message)"
         break        
     }
-    write-output "$(get-date) - Collection [$($CollectionName)] created in [$($AppName)] app."
+    write-output "$(get-date) - Collection [$($CollectionName)] created in [$($Namespace)] namespace."
 
 
     # define collection schema
     try {
-        $SplunkKVStoreCollectionSchema = Set-SplunkKVStoreCollectionSchema -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -CollectionSchema $CollectionSchema
+        $SplunkKVStoreCollectionSchema = Set-SplunkKVStoreCollectionSchema -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName -CollectionSchema $CollectionSchema
 
     }
     catch {
         Write-Error "$($error[0].Exception.Message)"
         break         
     }
-    write-output "$(get-date) - Collection schema set for [$($CollectionName)] in [$($AppName)] app."
+    write-output "$(get-date) - Collection schema set for [$($CollectionName)] in [$($Namespace)] namespace."
 
 }
 else {
-    write-output "$(get-date) - Collection [$($CollectionName)] already present in [$($AppName)] app."
+    write-output "$(get-date) - Collection [$($CollectionName)] already present in [$($Namespace)] namespeace."
 }
 
 
@@ -110,7 +110,7 @@ try {
 catch {
     write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
     try {
-        Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -User "nobody" -AppName $AppName -TransformSchema $TransformSchema | Out-Null
+        Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -User "nobody" -Namespace $Namespace -TransformSchema $TransformSchema | Out-Null
     }
     catch {
         Write-Error "$($error[0].Exception.Message)"
@@ -122,7 +122,7 @@ catch {
 # add multiple kvstore records in specified collection in specified app (can also Add-SplunkKVStoreCollectionRecord for a single record)
 write-output "$(get-date) - Invoking Add-SplunkKVStoreCollectionRecordsBatch function with recordset having $($records.count) entries."
 try {
-    Add-SplunkKVStoreCollectionRecordsBatch -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName -Records $Records | Out-Null
+    Add-SplunkKVStoreCollectionRecordsBatch -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName -Records $Records | Out-Null
 }
 catch {
     Write-Error "$($error[0].Exception.Message)"
@@ -134,7 +134,7 @@ catch {
 # get kvstore records in specified collection in specified app
 write-output "$(get-date) - Invoking Get-SplunkKVStoreCollectionRecords function."
 try {
-    $SplunkKVStoreCollectionRecords = Get-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+    $SplunkKVStoreCollectionRecords = Get-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName
 }
 catch {
     Write-Error "$($error[0].Exception.Message)"
@@ -146,16 +146,16 @@ write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($Splu
 <####  OTHER OPERATIONS ####
 
 # List all transform lookups
-Get-SplunkTransformLookups -sessionKey $SplunkSessionKey -BaseURL $BaseUrl
+Get-SplunkTransformLookups -sessionKey $SplunkSessionKey -User "nobody" -Namespace $Namespace -BaseURL $BaseUrl
 
 # Remove kvstore records in specified collection in specified app (does not return anything)
-Remove-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+Remove-SplunkKVStoreCollectionRecords -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName
 
 # Remove kvstore collection in specified app (does not return anything)
-Remove-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -AppName $AppName -CollectionName $CollectionName
+Remove-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName
 
 # Remove transform lookup (does not return anything except error)
-Remove-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -LookupName $CollectionName
+Remove-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -User "nobody" -Namespace $Namespace -LookupName $CollectionName
 
 ###### END CLEANUP OPERATINS ####>
 

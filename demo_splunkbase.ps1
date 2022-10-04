@@ -9,10 +9,10 @@ $VerbosePreference = 'SilentlyContinue'
 #>
 
 # gather username/password for Splunk
-if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with Splunkbase" }
+if (-not($mySplunkbaseCred)) { $mySplunkbaseCred = Get-Credential -Message "Enter credential for interacting with Splunkbase" }
 
 # trade username/password for session key
-$Session = Get-SplunkbaseSession -credential $mycred
+$Session = Get-SplunkbaseSession -credential $mySplunkbaseCred
 
 # get splunkbase apps
 $SplunkbaseApps = Get-SplunkbaseApps -session $Session

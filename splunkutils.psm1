@@ -80,8 +80,8 @@ function Invoke-SplunkSearchJob {
         [string]$sessionKey, 
         [ValidateNotNullOrEmpty()]
         [string]$BaseUrl, 
-        [string]$user = 'nobody',
-        [string]$namespace = 'search',        
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$query,
         [ValidateSet("fast", "smart", "verbose")]
@@ -90,7 +90,7 @@ function Invoke-SplunkSearchJob {
 
     )
  
-    $uri = "$($BaseUrl)/servicesNS/$($user)/$($namespace)/search/v2/jobs"    
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/search/v2/jobs"    
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -106,7 +106,7 @@ function Invoke-SplunkSearchJob {
         max_count          = 10000
         adhoc_search_level = $adhoc_search_level  # verbose, fast, smart
         sample_ratio       = $sample_ratio 
-        namespace          = $namespace
+        namespace          = $Namespace
     }
 
     Write-Host -Message "$(get-date) - Invoking-SplunkSearchJob with query:" | Out-Null
@@ -280,13 +280,13 @@ function Get-SplunkKVStoreCollectionList {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search"
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search'
     )
 
     Write-Host -Message "$(get-date) - getting KVstore collection list within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/config"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -338,8 +338,8 @@ function Add-SplunkKVStoreCollectionRecord {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName,
         $Record
@@ -347,7 +347,7 @@ function Add-SplunkKVStoreCollectionRecord {
 
     Write-Host -Message "$(get-date) - adding single record to collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/data/$($CollectionName)"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/data/$($CollectionName)"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -396,8 +396,8 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName,
         $Records
@@ -413,7 +413,7 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
 
         write-host -Message "$(get-date) - adding elements $($lbound) to $($ubound) of array to collection." | Out-Null
 
-        $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/data/$($CollectionName)/batch_save"
+        $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/data/$($CollectionName)/batch_save"
     
         $headers = [ordered]@{
             Authorization  = "Splunk $($SessionKey)"
@@ -464,15 +464,15 @@ function Get-SplunkKVStoreCollectionRecords {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName
     )
 
     Write-Host -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/data/$($CollectionName)"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/data/$($CollectionName)"
 
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
@@ -516,15 +516,15 @@ function Remove-SplunkKVStoreCollectionRecords {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName
     )
 
     Write-Host -Message "$(get-date) - removing records in collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/data/$($CollectionName)"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/data/$($CollectionName)"
 
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
@@ -567,8 +567,9 @@ function Add-SplunkKVStoreCollection {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
+        [ValidateNotNullOrEmpty()]        
         [string]$CollectionName
     )
 
@@ -576,7 +577,7 @@ function Add-SplunkKVStoreCollection {
 
     Write-Host -Message "$(get-date) - creating KVstore collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/config"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($sessionKey)"
@@ -634,16 +635,17 @@ function Set-SplunkKVStoreCollectionSchema {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName,
+        [ValidateNotNullOrEmpty()]        
         $CollectionSchema
     )
 
     Write-Host -Message "$(get-date) - setting schema for KVstore collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/config/$($CollectionName)"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config/$($CollectionName)"
 
     $headers = [ordered]@{
         Authorization  = "Splunk $($SessionKey)"
@@ -690,15 +692,15 @@ function Remove-SplunkKVStoreCollection {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [Parameter(Mandatory)]
-        [string]$Namespace = "search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         [string]$CollectionName
     )
 
     Write-Verbose -Message "$(get-date) - removing collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace."
 
-    $uri = "$($BaseUrl)/servicesNS/nobody/$($Namespace)/storage/collections/config/$($CollectionName)"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config/$($CollectionName)"
 
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
@@ -718,10 +720,8 @@ function Get-SplunkTransformLookups {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [ValidateNotNullOrEmpty()]
-        [string]$User="nobody",        
-        [ValidateNotNullOrEmpty()]
-        [string]$Namespace="search"       
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search'
     )
 
     $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/data/transforms/lookups"
@@ -745,10 +745,8 @@ function Add-SplunkTransformLookup {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [ValidateNotNullOrEmpty()]
-        [string]$User="nobody",        
-        [ValidateNotNullOrEmpty()]
-        [string]$Namespace="search",
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
         [ValidateNotNullOrEmpty()]
         $TransformSchema
     )    
@@ -783,10 +781,8 @@ function Remove-SplunkTransformLookup {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [ValidateNotNullOrEmpty()]
-        [string]$User="nobody",        
-        [ValidateNotNullOrEmpty()]
-        [string]$Namespace="search",        
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',        
         [ValidateNotNullOrEmpty()]
         [string]$LookupName
     )    
@@ -812,10 +808,8 @@ function Get-SplunkTransformLookup {
         [string]$BaseUrl,
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
-        [ValidateNotNullOrEmpty()]
-        [string]$User="nobody",        
-        [ValidateNotNullOrEmpty()]
-        [string]$Namespace="search",        
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',      
         [ValidateNotNullOrEmpty()]
         [string]$LookupName
     )    

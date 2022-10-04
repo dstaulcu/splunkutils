@@ -3,13 +3,13 @@ $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
-# import module providing for various Splunk related functions
-import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
-
 <# Toggle global verbosity Level
 $VerbosePreference = 'Continue'
 $VerbosePreference = 'SilentlyContinue'
 #>
+
+# import module providing for various Splunk related functions
+import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
 
 # gather username/password for Splunk
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }

@@ -3,11 +3,10 @@ $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
-<# Toggle Global Verbosity Level
-$VerbosePreference = "Continue"
-$VerbosePreference = "SilentlyContinue"
+<# Toggle global verbosity Level
+$VerbosePreference = 'Continue'
+$VerbosePreference = 'SilentlyContinue'
 #>
-
 
 # import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -Force
@@ -128,8 +127,6 @@ catch {
     Write-Error "$($error[0].Exception.Message)"
     break           
 }
-
-
 
 # get kvstore records in specified collection in specified app
 write-output "$(get-date) - Invoking Get-SplunkKVStoreCollectionRecords function."

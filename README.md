@@ -4,10 +4,10 @@
 
 # example apps leveraging splunkutils
 
-[demo_search.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_search.ps1/) - leverages splunkutils to orchestrate processing of splunk search jobs
+[demo_search.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_search.ps1/) - Demonstrates use of splunkutils to orchestrate processing of splunk search jobs.
 
-[demo_kvstore.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_kvstore.ps1/) - leverages splunkutils to facilitate splunk kv store and transform lookup operations.
+[demo_kvstore.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_kvstore.ps1/) - Demonstrates use of splunkutils to facilitate splunk kv store and transform lookup operations.
 
-[demo_splunkbase.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_splunkbase.ps1/) - leverages splunkutils to facilitate authentication and download of most recent list of apps on Splunkbase
+[demo_splunkbase.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_splunkbase.ps1/) - Demonstrates use of splunkutils to facilitate authentication to Splunkbase and download the catalog (listing) of apps.
 
-[demo_fieldsummaries.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_fieldsummaries.ps1/) - leverages splunkutils to export fieldsummaries unique to each combination of index, source, and sourcetype within a specified namespace (app) and applicable to all users.
+[demo_fieldsummaries.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_fieldsummaries.ps1/) - Demonstrates use of splunkutils to export fieldsummaries unique to each combination of index, source, and sourcetype within a specified namespace (app) and applicable to specifed users.

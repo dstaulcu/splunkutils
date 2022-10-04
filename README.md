@@ -10,4 +10,4 @@
 
 [demo_splunkbase.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_splunkbase.ps1/) - leverages splunkutils to facilitate authentication and download of most recent list of apps on Splunkbase
 
-[demo_fieldsummaries.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_fieldsummaries.ps1/) - leverages splunkutils to facilitate listing of fields common to each index, source, and sourcetype combination.
+[demo_fieldsummaries.ps1](https://github.com/dstaulcu/splunkutils/blob/main/demo_fieldsummaries.ps1/) - leverages splunkutils to export fieldsummaries unique to  to each index, source, and sourcetype groupings in a specified namespace (app) and applicable to all users (nobody).

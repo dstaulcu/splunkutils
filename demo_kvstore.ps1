@@ -3,6 +3,12 @@ $splunk_rest_port = "8089"
 $BaseUrl = "https://$($splunk_server):$($splunk_rest_port)"
 $script_start = get-date
 
+<# Toggle Global Verbosity Level
+$VerbosePreference = "Continue"
+$VerbosePreference = "SilentlyContinue"
+#>
+
+
 # import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -Force
 
@@ -104,7 +110,7 @@ try {
 catch {
     write-output "$(get-date) - Invoking Add-SplunkTransformLookup function."    
     try {
-        Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -TransformSchema $TransformSchema | Out-Null
+        Add-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -User "nobody" -AppName $AppName -TransformSchema $TransformSchema | Out-Null
     }
     catch {
         Write-Error "$($error[0].Exception.Message)"

@@ -741,6 +741,10 @@ function Add-SplunkTransformLookup {
         [ValidateNotNullOrEmpty()]
         [string]$SessionKey,
         [ValidateNotNullOrEmpty()]
+        [string]$User="nobody",        
+        [ValidateNotNullOrEmpty()]
+        [string]$AppName="search",
+        [ValidateNotNullOrEmpty()]
         $TransformSchema
     )    
 
@@ -753,13 +757,18 @@ function Add-SplunkTransformLookup {
         }
     #>
 
-    $uri = "$($BaseUrl)/services/data/transforms/lookups"
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($AppName)/data/transforms/lookups"
     
     $headers = [ordered]@{
         Authorization = "Splunk $($SessionKey)"
     }
 
     $body = $TransformSchema
+
+    Write-Verbose "uri = $($uri)" | Out-Null
+    Write-Verbose "headers = $($headers)"| Out-Null
+    write-verbose "body = $($body)"| Out-Null
+
     
     $WebRequest = Invoke-RestMethod -SkipCertificateCheck -Uri $uri -Headers $headers -Body $body -Method Post      
 

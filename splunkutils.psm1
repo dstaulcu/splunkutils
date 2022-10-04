@@ -1,6 +1,7 @@
 
 <# PUBLIC AUTHENTICATION FUNCTIONS #>
-function Get-SplunkSessionKey {   
+function Get-SplunkSessionKey {
+
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -250,29 +251,6 @@ function Get-SplunkSearchJobResults {
 <# PUBLIC KVSTORE/COLLECTION FUNCTIONS #>
 
 function Get-SplunkKVStoreCollectionList {
-    <#
-.SYNOPSIS
-    Returns a list of KVstore collections registered in Splunk.
-
-.DESCRIPTION
-    Get-KVStoreCollectionList is a function that returns a list of Returns a list of KVstore
-    collections registered in Splunk.
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    are associated with.
-
-.EXAMPLE
-     Get-SplunkKVStoreCollectionList -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search'
-#>
 
     [CmdletBinding()]
     param(
@@ -300,37 +278,6 @@ function Get-SplunkKVStoreCollectionList {
 }
 
 function Add-SplunkKVStoreCollectionRecord {
-    <#
-.SYNOPSIS
-    Add a single record into kvstore collection
-
-.DESCRIPTION
-    Add a single record into kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection that will registered
-
-.PARAMETER Record
-    A hash table with values for fields_list entities
-
-.EXAMPLE
-     Add-SplunkKVStoreCollectionRecord -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record @{
-            name='David''
-            message = 'Hello world!'
-        }
-#>
 
     [CmdletBinding()]
     param(
@@ -362,34 +309,7 @@ function Add-SplunkKVStoreCollectionRecord {
 }
 
 function Add-SplunkKVStoreCollectionRecordsBatch {
-    <#
-.SYNOPSIS
-    Add a single record into kvstore collection
 
-.DESCRIPTION
-    Add a single record into kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection that will registered
-
-.PARAMETER Record
-    A hash table with values for fields_list entities
-
-.EXAMPLE
-     Add-SplunkKVStoreCollectionRecordsBatch -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -Record $Records
-#>
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -430,34 +350,7 @@ function Add-SplunkKVStoreCollectionRecordsBatch {
 }
 
 function Get-SplunkKVStoreCollectionRecords {
-    <#
-.SYNOPSIS
-    List records in a specified kvstore collection
 
-.DESCRIPTION
-    List records in a specified kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection that will registered
-
-.PARAMETER Records
-    A hash table with values for fields_list entities
-
-.EXAMPLE
-     Get-SplunkKVStoreCollectionRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
-#>
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -485,31 +378,7 @@ function Get-SplunkKVStoreCollectionRecords {
 }
 
 function Remove-SplunkKVStoreCollectionRecords {
-    <#
-.SYNOPSIS
-    Remove records in a kvstore collection
 
-.DESCRIPTION
-    Remove records in a kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection
-
-.EXAMPLE
-     Remove-SplunkKVStoreCollectionRecords -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
-#>    
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -536,31 +405,7 @@ function Remove-SplunkKVStoreCollectionRecords {
 }
 
 function Add-SplunkKVStoreCollection {
-    <#
-.SYNOPSIS
-    Add a kvstore collection
 
-.DESCRIPTION
-    Add a kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection
-
-.EXAMPLE
-     Add-KVStoreCollection -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
-#> 
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -596,39 +441,7 @@ function Add-SplunkKVStoreCollection {
 }
 
 function Set-SplunkKVStoreCollectionSchema {
-    <#
-.SYNOPSIS
-    Set the schema associated with a kvstore collection
 
-.DESCRIPTION
-    Set the schema associated with a kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection
-
-.PARAMETER CollectionSchema
-    A hash containing desired elements of collection schema.  See example.
-
-.EXAMPLE
-    Set-SplunkKVStoreCollectionSchema -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test' -CollectionSchema  @{
-            'field.id' = 'number'
-            'field.name' = 'string'
-            'field.message' = 'string'
-            'accelerated_fields.my_accel' = '{"id": 1}'
-        }
-#> 
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -661,31 +474,7 @@ function Set-SplunkKVStoreCollectionSchema {
 }
 
 function Remove-SplunkKVStoreCollection {
-    <#
-.SYNOPSIS
-    Remove a kvstore collection
 
-.DESCRIPTION
-    Remove a kvstore collection
-
-.PARAMETER BaseUrl
-    A string representing a url path to the management interface of a Spunk server.
-    The string is constructed with https://<hostname>:<port>
-    The default port is 8089.
-
-.PARAMETER SessionKey
-    A session key composed from output of the Get-SplunkSessionKey function
-
-.PARAMETER AppName
-    The name of the splunk app (search, home, etc.) that the KVStore of interest
-    is associated with.
-
-.PARAMETER CollectionName
-    The name of the kvstore collection
-
-.EXAMPLE
-    Remove-SplunkKVStoreCollection -BaseURL 'https://mysplunk:8089' -SessionKey 'Splunk asdfAasdfasdfasdfasdf....' -AppName 'search' -CollectionName 'test'
-#> 
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -714,6 +503,7 @@ function Remove-SplunkKVStoreCollection {
 <# PUBLIC TRANSFORM FUNCTIONS #>
 
 function Get-SplunkTransformLookups {
+
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -831,13 +621,17 @@ function Get-SplunkTransformLookup {
 <# SPLUNKBASE #>
 
 function Get-SplunkbaseSession {
-    param($credential)
+
+    [CmdletBinding()]    
+    param(
+        $credential
+    )
 
     $user = $credential.UserName
     $pass = [System.Net.NetworkCredential]::new("", $credential.Password).Password
 
     ## establish logon session to splunk via okta
-    $BASE_AUTH_URL='https://account.splunk.com/api/v1/okta/auth'
+    $BASE_AUTH_URL = 'https://account.splunk.com/api/v1/okta/auth'
     $Body = @{
         username = $user
         password = $pass
@@ -860,6 +654,7 @@ function Get-SplunkbaseSession {
 }
 
 function Get-SplunkbaseApps {
+    
     [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
@@ -874,8 +669,7 @@ function Get-SplunkbaseApps {
     # gather all of the content available over pages
     $Apps = New-Object System.Collections.ArrayList
 
-    for ($offset = 0; $offset -le $content.total; $offset += 100)
-    {
+    for ($offset = 0; $offset -le $content.total; $offset += 100) {
         write-verbose -message "$(get-date) - Getting next 100 results from offset $($offset) [total=$($content.total)]"
 
         $url = "https://splunkbase.splunk.com/api/v1/app/?order=latest&limit=100&offset=$($offset)"

@@ -673,7 +673,10 @@ function Get-SplunkbaseApps {
         write-verbose -message "$(get-date) - Getting next 100 results from offset $($offset) [total=$($content.total)]"
 
         $url = "https://splunkbase.splunk.com/api/v1/app/?order=latest&limit=100&offset=$($offset)"
+
+        $ProgressPreference = 'SilentlyContinue'    # Subsequent calls do not display UI.
         $response = invoke-webrequest $url -WebSession $Session -UseBasicParsing
+        $ProgressPreference = 'Continue'                    
 
         $batch_of_apps = $response.Content | ConvertFrom-Json   
 

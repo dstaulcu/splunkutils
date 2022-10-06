@@ -15,6 +15,7 @@ if (-not($mySplunkbaseCred)) { $mySplunkbaseCred = Get-Credential -Message "Ente
 $Session = Get-SplunkbaseSession -credential $mySplunkbaseCred
 
 # get splunkbase apps
+write-host "$(Get-date) - Downloading SplunkbaseApps catalog..."
 $SplunkbaseApps = Get-SplunkbaseApps -session $Session
 if (-not($SplunkbaseApps.count -ge 1)) {
     write-host "$(get-date) - Get-SplunkbaseApps function returned unexpected results."
@@ -22,8 +23,15 @@ if (-not($SplunkbaseApps.count -ge 1)) {
 }
 
 # show most recently updated app as preview of results
-write-host "$(get-date) - Get-SplunkbaseApps function returned $($SplunkbaseApps.count) results.  Preview:"
-$SplunkbaseApps | Sort-Object -Property updated_time -Descending | Select-Object -First 1
+write-host "$(get-date) - Get-SplunkbaseApps function returned $($SplunkbaseApps.count) results."
+
+# render results in gridview
+write-host "$(get-date) - Rendering results in GridView."
+$SplunkbaseApps | 
+    Where-Object{$_.Title -match ".*" -and $_.archive_status -eq "live"} |  
+    Sort-Object -Property updated_time -Descending |
+    Select-object -Property updated_time, type, title, path, download_count, description |
+    Out-GridView -Title "Results Preview"
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

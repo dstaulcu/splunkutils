@@ -142,6 +142,31 @@ write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($Splu
 
 <####  OTHER OPERATIONS ####
 
+# get collection details
+$CollectionList = Get-SplunkKVStoreCollectionList -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace
+$Collection = $CollectionList | where-object {$_.title -eq $CollectionName}
+
+<#
+# list Roles which could be applied to an ACL
+# (Get-SplunkAuthorizationRoles -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey).title -join ', '
+
+# list Users which could be applied to an ACL
+# (Get-SplunkAuthenticationUsers -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey).title -join ', '
+
+# set permissions.  Note built-in roles (admin, can_delete, power, splunk-system-role, user)
+$objectACL = Set-SplunkObjectACL -sessionKey $SplunkSessionKey -id $Collection.id -app $Namespace -owner 'staulcd-dev' -perms_read '*' -perms_write 'admin, staulcd-dev, user'
+
+# show general ACL info
+$general_perms = ($objectACL.content.dict.key | where-object {$_.name -eq 'eai:acl'}).dict.key
+write-output $general_perms
+
+# show individual premissions
+$read_perms = (((($objectACL.content.dict.key | where-object {$_.name -eq 'eai:acl'}).dict.key | Where-Object {$_.name -eq 'perms'}).dict.key | Where-Object {$_.name -eq 'read'}).list.innertext).trim()
+write-output "Read Permissions: $($read_perms)"
+
+$write_perms = (((($objectACL.content.dict.key | where-object {$_.name -eq 'eai:acl'}).dict.key | Where-Object {$_.name -eq 'perms'}).dict.key | Where-Object {$_.name -eq 'write'}).list.innertext).trim()
+write-output "Write Permissions: $($write_perms)"
+
 # List all transform lookups
 Get-SplunkTransformLookups -sessionKey $SplunkSessionKey -User "nobody" -Namespace $Namespace -BaseURL $BaseUrl
 

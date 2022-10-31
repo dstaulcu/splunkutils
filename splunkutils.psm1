@@ -688,3 +688,189 @@ function Get-SplunkbaseApps {
 
     return $Apps
 }
+
+function Get-SplunkKVStoreCollectionACL {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
+        [string]$CollectionName
+
+    )
+
+    Write-Host -Message "$(get-date) - getting KVstore collection ACL for $($CollectionName) within `"$($Namespace)`" namespace." | Out-Null
+
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config/$($CollectionName)/acl"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
+
+    return $Response
+} 
+
+function Set-SplunkKVStoreCollectionACL {
+
+    # https://docs.splunk.com/Documentation/Splunk/9.0.1/RESTUM/RESTusing#Access_Control_List
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
+        [string]$CollectionName
+
+    )
+
+    Write-Host -Message "$(get-date) - getting KVstore collection ACL for $($CollectionName) within `"$($Namespace)`" namespace." | Out-Null
+
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/config/$($CollectionName)/acl"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
+
+    return $Response
+}    
+
+function Get-SplunkObjectACL {
+
+    # https://docs.splunk.com/Documentation/Splunk/9.0.1/RESTUM/RESTusing#Access_Control_List
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [ValidateNotNullOrEmpty()]        
+        [string]$id
+    )
+
+    Write-Host -Message "$(get-date) - getting KVstore collection ACL for $($CollectionName) within `"$($Namespace)`" namespace." | Out-Null
+
+    $uri = "$($id)/acl"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
+
+    return $Response
+}  
+
+function Set-SplunkObjectACL {
+
+    # https://docs.splunk.com/Documentation/Splunk/9.0.1/RESTUM/RESTusing#Access_Control_List
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [ValidateNotNullOrEmpty()]        
+        [string]$id,
+        [string]$app = 'search',
+        [string]$owner = 'nobody',
+        [string]$perms_read = '*',
+        [string]$perms_write = 'admin',
+        [string]$removable = $true,
+        [ValidateSet("app", "global", "user")]
+        [string]$sharing = 'app'
+    )
+
+    Write-Host -Message "$(get-date) - getting KVstore collection ACL for $($CollectionName) within `"$($Namespace)`" namespace." | Out-Null
+
+    $uri = "$($id)/acl"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    # app and removable do not appy in context of kvstore collection
+    $body = @{
+#        app             = $app
+        owner           = $owner
+        'perms.read'    = $perms_read
+        'perms.write'   = $perms_write
+#        removable       = $removable
+        sharing         = $sharing
+    }
+
+    $body                  
+        
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method Post
+
+    return $Response
+}  
+
+
+function Get-SplunkAuthorizationRoles {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey
+    )
+
+    Write-Host -Message "$(get-date) - getting server roles" | Out-Null
+
+    $uri = "$($BaseUrl)/services/authorization/roles"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
+
+    return $Response
+}    
+
+
+function Get-SplunkAuthenticationUsers {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey
+    )
+
+    Write-Host -Message "$(get-date) - getting server users" | Out-Null
+
+    $uri = "$($BaseUrl)/services/authentication/users"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        'Content-Type' = 'application/json'    
+        output_mode    = 'json'
+    }
+
+    $Response = Invoke-Restmethod -Uri $uri -SkipCertificateCheck -Headers $headers -body $body -Method GET
+
+    return $Response
+}   

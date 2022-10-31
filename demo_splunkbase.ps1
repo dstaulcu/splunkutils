@@ -33,6 +33,16 @@ $SplunkbaseApps |
     Select-object -Property updated_time, type, title, path, download_count, description |
     Out-GridView -Title "Results Preview"
 
+    $SplunkbaseApps | 
+    Where-Object{$_.Title -match ".*" -and $_.archive_status -eq "live" -and $_.download_count -ne "n/a"} |  
+    Sort-Object -Property download_count -Descending |
+    Select-object -Property updated_time, type, title, path, download_count |
+    Out-GridView -Title "Results Preview"
+
+    $SplunkbaseApps | Where-Object{$_.Title -match "sysmon"}  |   Sort-Object -Property download_count -Descending |
+    Select-object -Property updated_time, type, title, path, download_count , archive_status | Out-GridView
+
+
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start
 write-output "$(get-date) - Script execution completed with runtime duration of [$($timespan)]."

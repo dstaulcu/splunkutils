@@ -153,6 +153,8 @@ $Collection = $CollectionList | where-object {$_.title -eq $CollectionName}
 # list Users which could be applied to an ACL
 # (Get-SplunkAuthenticationUsers -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey).title -join ', '
 
+$objectACL = Get-SplunkObjectACL -sessionKey $SplunkSessionKey -id $Collection.id
+
 # set permissions.  Note built-in roles (admin, can_delete, power, splunk-system-role, user)
 $objectACL = Set-SplunkObjectACL -sessionKey $SplunkSessionKey -id $Collection.id -app $Namespace -owner 'staulcd-dev' -perms_read '*' -perms_write 'admin, staulcd-dev, user'
 
@@ -179,7 +181,7 @@ Remove-SplunkKVStoreCollection -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -
 # Remove transform lookup (does not return anything except error)
 Remove-SplunkTransformLookup -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -User "nobody" -Namespace $Namespace -LookupName $CollectionName
 
-###### END CLEANUP OPERATINS ####>
+###### END OTHER OPERATINS ####>
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

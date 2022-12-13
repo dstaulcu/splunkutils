@@ -11,11 +11,36 @@ $VerbosePreference = 'SilentlyContinue'
 # import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
 
-# gather username/password for Splunk
+# gather username/password for Splunk from user
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }
 
 # trade username/password for session key
 $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
+
+<# alternatively you can present a session key from user access token (credential) stored as securestring
+$credfile_path = 'C:\apps\credstore\splunk_dev_token.txt'  
+
+# check to see if the storage file for secret exists
+if (-not (test-path -Path $credfile_path))
+{
+    # allow for storage (or reset) of secret
+    if (Test-Path -path $credfile_path) { remove-item -path $credfile_path -Force}  # useful only when resetting credential interactively
+    Read-Host -Prompt "Enter secret to store as secure string in $($credfile_path): " -AsSecureString | ConvertFrom-SecureString | Out-File -FilePath  $credfile_path
+} 
+
+# read the secret from storage file and convert to secure string object
+$secure_string = get-content -path $credfile_path  | ConvertTo-SecureString
+
+# convert the secure string to plain text
+$bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure_string)
+$SplunkSessionKey = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+#>
+
+
+# specify search query to execute (events)
+$query = ' search earliest=-8h index=_internal
+| stats count by _time, index, sourcetype, source, host, _raw
+| sort 0 _time '
 
 # specify search query to execute (non-events)
 $query = '| makeresults count=150234
@@ -24,11 +49,6 @@ $query = '| makeresults count=150234
 | delta eventnumber as delta
 | eval delta=coalesce(delta,"0")
 | table _time delta, eventnumber
-| sort 0 _time '
-
-# specify search query to execute (events)
-$query = ' search earliest=-8h index=_internal
-| stats count by _time, index, sourcetype, source, host, _raw
 | sort 0 _time '
 
 # execute search job

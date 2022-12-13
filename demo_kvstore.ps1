@@ -11,17 +11,30 @@ $VerbosePreference = 'SilentlyContinue'
 # import module providing for various Splunk related functions
 import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -Force
 
-# gather username/password for Splunk
+# gather username/password for Splunk from user
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }
 
 # trade username/password for session key
-try {
-    $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
-}
-catch {
-    Write-Error "$($error[0].Exception.Message)"
-    break   
-}
+$SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
+
+<# alternatively you can present a session key from user access token (credential) stored as securestring
+$credfile_path = 'C:\apps\credstore\splunk_dev_token.txt'  
+
+# check to see if the storage file for secret exists
+if (-not (test-path -Path $credfile_path))
+{
+    # allow for storage (or reset) of secret
+    if (Test-Path -path $credfile_path) { remove-item -path $credfile_path -Force}  # useful only when resetting credential interactively
+    Read-Host -Prompt "Enter secret to store as secure string in $($credfile_path): " -AsSecureString | ConvertFrom-SecureString | Out-File -FilePath  $credfile_path
+} 
+
+# read the secret from storage file and convert to secure string object
+$secure_string = get-content -path $credfile_path  | ConvertTo-SecureString
+
+# convert the secure string to plain text
+$bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure_string)
+$SplunkSessionKey = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+#>
 
 # define properties of collection to create, update, etc.  
 $CollectionSchema = @{

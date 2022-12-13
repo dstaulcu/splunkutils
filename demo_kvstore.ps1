@@ -17,19 +17,19 @@ if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for int
 # trade username/password for session key
 $SplunkSessionKey = Get-SplunkSessionKey -Credential $myCred -BaseUrl $BaseUrl
 
-<# alternatively you can present a session key from user access token (credential) stored as securestring
+<#
+# alternatively you can present a session key from user access token (credential) stored as securestring
 $credfile_path = 'C:\apps\credstore\splunk_dev_token.txt'  
 
 # check to see if the storage file for secret exists
-if (-not (test-path -Path $credfile_path))
-{
+if (-not (test-path -Path $credfile_path)) {
     # allow for storage (or reset) of secret
-    if (Test-Path -path $credfile_path) { remove-item -path $credfile_path -Force}  # useful only when resetting credential interactively
-    Read-Host -Prompt "Enter secret to store as secure string in $($credfile_path): " -AsSecureString | ConvertFrom-SecureString | Out-File -FilePath  $credfile_path
+    if (Test-Path -path $credfile_path) { remove-item -path $credfile_path -Force }  # useful only when resetting credential interactively
+    Read-Host -Prompt "Enter secret to store as secure string in $($credfile_path): " -AsSecureString | ConvertFrom-SecureString | Out-File -FilePath $credfile_path
 } 
 
 # read the secret from storage file and convert to secure string object
-$secure_string = get-content -path $credfile_path  | ConvertTo-SecureString
+$secure_string = get-content -path $credfile_path | ConvertTo-SecureString
 
 # convert the secure string to plain text
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure_string)
@@ -151,6 +151,19 @@ catch {
     break           
 }
 write-output "$(get-date) - Get-SplunkKVStoreCollectionRecords returned [$($SplunkKVStoreCollectionRecords.count)] records."    
+
+
+<#
+# query specific items in collection 
+# https://docs.splunk.com/Documentation/Splunk/9.0.1/RESTREF/RESTkvstore#storage.2Fcollections.2Fdata.2F.7Bcollection.7D
+
+$Query = @{
+    'id' = @{'$lte'=5} 
+}
+$fields = 'id,_key,name,message'
+$Results = Get-SplunkKVStoreCollectionRecordsQuery -BaseUrl $BaseUrl -SessionKey $SplunkSessionKey -Namespace $Namespace -CollectionName $CollectionName -Query $Query -Fields $fields
+#>
+
 
 
 <####  OTHER OPERATIONS ####

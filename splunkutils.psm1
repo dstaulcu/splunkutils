@@ -377,6 +377,48 @@ function Get-SplunkKVStoreCollectionRecords {
     return $Response
 }
 
+function Get-SplunkKVStoreCollectionRecordsQuery {
+
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseUrl,
+        [ValidateNotNullOrEmpty()]
+        [string]$SessionKey,
+        [string]$User = 'nobody',
+        [string]$Namespace = 'search',
+        [ValidateNotNullOrEmpty()]
+        [string]$CollectionName,
+        $Query,
+        [string]$Fields,
+        [string]$sort = '_key:1'   # -1 descending, 1 ascending, default (ascending)
+    )
+
+    Write-Host -Message "$(get-date) - retrieving records from collection named `"$($CollectionName)`" within `"$($Namespace)`" namespace." | Out-Null
+
+    $uri = "$($BaseUrl)/servicesNS/$($User)/$($Namespace)/storage/collections/data/$($CollectionName)"
+
+    $headers = [ordered]@{
+        Authorization  = "Splunk $($SessionKey)"
+        output_mode    = 'json'
+        'Content-Type' = 'application/json'        
+    }
+
+
+    $body = @{
+        'query'  = $query | ConvertTo-Json -Compress
+        'fields' = $fields
+        'sort'   = $sort
+    }
+
+    write-host $body
+
+    $Response = Invoke-RestMethod -Uri $uri -SkipCertificateCheck -Headers $headers -Body $body -Method Get
+
+    return $Response
+}
+
+
 function Remove-SplunkKVStoreCollectionRecords {
 
     [CmdletBinding()]

@@ -29,11 +29,7 @@ for ($i=1 ; $i -le $sample_record_count; $i++) {
 }
 
 # call the function in the splunkutils module passing record/recordset for writing to hec in batch if necessary
-<<<<<<< HEAD
 Add-SplunkHecEvents -server "localhost" -hec_port "9088" -hec_token "ced6bfd1-d277-44dc-92c6-a68e0cb9f83a" -index "main" -source "test-source" -sourcetype "test-sourcetype" -record $Records -max_batchsize_mb 1MB
-=======
-Add-SplunkHecEvents -server "localhost" -hec_port "9088" -hec_token "ced6bfd1-d277-44dc-92c6-a68e0cb9f83a" -index "main" -source "test-source" -sourcetype "test-sourcetype" -record $Records -hec_event_max_batchsize_bytes $max_batchsize_mb
->>>>>>> 5022bf7457a09d6c7f20a900baa07760651d3af5
 
 # display script execution runtime summary
 $timespan = New-TimeSpan -Start $script_start

@@ -6,10 +6,6 @@ import-module -name .\splunkutils.psm1 -force
 # define variables to control the count and size of sample events
 $sample_record_count = 10000
 $sample_event_size_bytes = 256
-<<<<<<< HEAD
-=======
-$max_batchsize_mb = 1MB
->>>>>>> 5022bf7457a09d6c7f20a900baa07760651d3af5
 
 write-host "$(get-date) - Creating $($sample_record_count) array members with each message property having size of $($sample_event_size_bytes) bytes."
 

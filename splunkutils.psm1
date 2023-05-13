@@ -903,7 +903,7 @@ function Add-SplunkHecEvents {
         [ValidateNotNullOrEmpty()]
         [string]$sourcetype = "test-sourcetype",
         [ValidateNotNullOrEmpty()]
-        [int]$hec_event_max_batchsize_bytes = 1MB,
+        [int]$max_batchsize_mb = 1MB,
         [ValidateNotNullOrEmpty()]        
         [array]$records
     ) 
@@ -946,7 +946,7 @@ function Add-SplunkHecEvents {
         $hec_events_size += $hec_event_size
 
         # if records as json exceed max size..
-        if ($hec_events_size -ge $hec_event_max_batchsize_bytes) {
+        if ($hec_events_size -ge $max_batchsize_mb) {
     
             # copy all but current event into batch array
             $batch_counter++

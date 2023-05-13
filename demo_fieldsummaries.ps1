@@ -9,7 +9,7 @@ $VerbosePreference = 'SilentlyContinue'
 #>
 
 # import module providing for various Splunk related functions
-import-module -name "C:\Apps\splunkutils\splunkutils.psm1" -force
+import-module -name .\splunkutils.psm1 -force
 
 # gather username/password for Splunk
 if (-not($mycred)) { $mycred = Get-Credential -Message "Enter credential for interacting with $($BaseUrl)." }

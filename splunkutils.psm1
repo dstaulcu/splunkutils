@@ -885,3 +885,99 @@ function Get-SplunkAuthenticationUsers {
 
     return $Response
 }   
+
+
+function Add-SplunkHecEvents {
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$server,
+        [ValidateNotNullOrEmpty()]
+        [int]$hec_port = "8088",
+        [ValidateNotNullOrEmpty()]
+        [string]$hec_token,
+        [ValidateNotNullOrEmpty()]
+        [string]$index = "main",
+        [ValidateNotNullOrEmpty()]
+        [string]$source = "test-source",
+        [ValidateNotNullOrEmpty()]
+        [string]$sourcetype = "test-sourcetype",
+        [ValidateNotNullOrEmpty()]
+        [int]$hec_event_max_batchsize_bytes = 1MB,
+        [ValidateNotNullOrEmpty()]        
+        [array]$records
+    ) 
+    
+    <# TODO:
+    - add optional parameter to override event time
+    #>
+
+    $url = "https://${server}:${hec_port}/services/collector/event"
+
+    $header = @{Authorization = "Splunk ${hec_token}" }
+
+    $hec_events = New-Object System.Collections.ArrayList
+    
+    # for array we split and send each
+    $hec_event_counter = 0
+    $batch_counter = 0
+        
+    foreach ($record in $records) {
+    
+        $hec_event_counter++
+
+        $hec_event = [ordered]@{}
+        $hec_event.add("index", $index)
+        $hec_event.add("source", $source)
+        $hec_event.add("sourcetype", $sourcetype)
+        $hec_event.add("event", $record)
+
+        $hec_events.add($hec_event) | Out-Null
+
+    
+        # calculate thee size of the new record as json
+        $hec_event_size = ($hec_event | ConvertTo-Json -Compress -Depth 10).Length
+
+        # add bytes to event size as representation of tokens surrounding a json array member
+        $hec_event_size += ',[]'.Length
+
+        # add size of this array member to running total of size of all members
+        $hec_events_size_last = $hec_events_size
+        $hec_events_size += $hec_event_size
+
+        # if records as json exceed max size..
+        if ($hec_events_size -ge $hec_event_max_batchsize_bytes) {
+    
+            # copy all but current event into batch array
+            $batch_counter++
+            $batch = $hec_events[0..$($hec_events.count - 2)]
+    
+            write-host "$(get-date) - Writing batch $($batch_counter) to Splunk HEC having $($batch.count) events with total size of $($hec_events_size_last) bytes."        
+
+            $batch = $batch | ConvertTo-Json -Compress -Depth 10                      
+
+            # write batch array into Splunk
+            $Result = Invoke-RestMethod -Method Post -Uri $url -Headers $header -Body $batch -SkipCertificateCheck
+    
+            # clear main array
+            $hec_events.clear()
+            $hec_events_size = 0
+    
+            # re-add current event
+            $hec_events.add($hec_event) | Out-Null
+        
+        }        
+
+        if ($hec_event_counter -eq $records.count) {
+            $batch_counter++
+            $batch = $hec_events    
+
+            write-host "$(get-date) - Writing last batch $($batch_counter) having $($batch.count) events to splunk hec"        
+            $batch = $batch | ConvertTo-Json -Compress -Depth 10    
+            
+            # write batch array into Splunk
+            $Result = Invoke-RestMethod -Method Post -Uri $url -Headers $header -Body $batch -SkipCertificateCheck
+
+        }
+    }
+}

@@ -1,6 +1,6 @@
 # splunkutils
 
-[splunkutils.psm1](https://github.com/dstaulcu/splunkutils/blob/main/splunkutils.psm1/) - a powershell module (library of functions) to simplify interaction with Splunk resources via REST.
+[splunkutils.psm1](https://github.com/dstaulcu/splunkutils/blob/main/splunkutils.psm1/) - a powershell module to simplify interaction with Splunk resources via REST.
 
 # example apps leveraging splunkutils
 
